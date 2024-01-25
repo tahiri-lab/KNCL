@@ -36,11 +36,12 @@ All branch lengths within maximal distinct-leaf subtrees should be adjusted acco
 
 **Step 4.** For each element inside $SD(T_1)$ for tree $T_1$ and inside $SD(T_2)$ for tree $T_2$ do the following:
 
-1. Select k nearest common leaves $l_k$ (the user needs to input this value) sorted in ascending order by distance to the considered element from SD and calculate the cutback distances between each selected common leaf and that element. The cutback distance between any two leaves $l_1$ and $l_2$ of the phylogenetic tree $T$ is determined by the sum of the branch lengths between $l_1$ and the least common ancestor (LCA) of $l_2$. Alternatively, the cutback distance $dc^{(T)}(l_1,l_2)$ can be calculated as the distance between leaves $l_1$ and $l_2$ minus the branch length of the leaf $l_2$:
-$dc^{(T)}(l_1,l_2) = d^{(T)}(l_1,l_2) - br^{(T)}(l_2)$,
-where $br^{(T)}(l_2)$ is the branch length of the leaf $l_2$ in tree $T$.
+1. Select k nearest common leaves $l_k$ (the user needs to input this value) sorted in ascending order by distance to the considered element from SD and calculate the cutback distances between each selected common leaf and that element. The cutback distance between any two leaves $l_1$ and $l_2$ of the phylogenetic tree $T$ (denoted as $dc^{(T)}(l_1,l_2)$ ) is determined by the sum of the branch lengths between $l_1$ and the parent node of leaf $l_2$. Alternatively, the cutback distance $dc^{(T)}(l_1,l_2)$ in the phylogenetic tree $T$ is calculated as the distance between leaves $l_1$ and $l_2$ minus the length of the terminal branch leading to leaf $l_2$:
 
-2. Multiply these distances by the corresponding leaf-based adjustment rates (the two following formulas) to obtain the distances $d_p$ in order to find possible positions for adding new leaves related to the same common leaves in another tree:
+$dc^{(T)}(l_1,l_2) = d^{(T)}(l_1,l_2) - br^{(T)}(l_2)$,
+where $br^{(T)}(l_2)$ is the terminal branch leading to leaf $l_2$ in tree $T$.
+
+3. Multiply these distances by the corresponding leaf-based adjustment rates (the two following formulas) to obtain the distances $d_p$ in order to find possible positions for adding new leaves related to the same common leaves in another tree:
     
 $\forall a \in SD(T_1), \forall l_k \in CL(T_1,T_2), d_p^{(T_2)}(l_k,a) = dc^{(T_1)}(l_k,a) \cdot r^{(l_k)}(T_2, T_1)$,
 
