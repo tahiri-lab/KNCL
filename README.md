@@ -1,5 +1,7 @@
 # K-NCL
-k-Nearest Common Leaves: phylogenetic tree completion algorithm 
+**k-Nearest Common Leaves: phylogenetic tree completion algorithm**
+
+> The results of this work was submitted to [RECOMB-CG 2024](http://recomb-cg.org/), the 21st Annual Satellite Conference of RECOMB on Comparative Genomics: Koshkarov, A. & Tahiri, N. (2024). Novel algorithm for comparing phylogenetic trees with different but overlapping taxa. In RECOMB International Workshop on Comparative Genomics.
 
 We have 2 phylogenetic trees in Newick format. These trees have different but overlapping taxa (leaves). The tree completion process consists of making both trees defined on the same taxa (this is the union of the leaf sets of both trees) by adding distinct (non-common) leaves from one tree to the other. This process involves the following five steps.
 
