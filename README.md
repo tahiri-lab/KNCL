@@ -3,24 +3,24 @@
 
 > The results of this work were submitted to [RECOMB-CG 2024](http://recomb-cg.org/), the 21st Annual Satellite Conference of RECOMB on Comparative Genomics: Koshkarov, A. & Tahiri, N. (2024). Novel algorithm for comparing phylogenetic trees with different but overlapping taxa. In RECOMB International Workshop on Comparative Genomics.
 
-#### Description
+#### Description :bookmark_tabs:
 `bsd_distance.py` is a Python script designed to complete 2 phylogenetic trees defined on different but mutually overlapping sets of taxa on the union of their taxa sets and calculate the Branch Score Distance (BSD(+)) between completed phylogenetic trees. The BSD is a measure of the dissimilarity between two trees based on their branch lengths. The script processes trees in Newick format, comparing the first tree in the input file with every other tree. It outputs the completed versions of these trees, their BSD(+) distance, the pruned versions of the trees, and the BSD(-) distance.
 
->**Current Status**
+>:pushpin: **Current Status**
 >
 >Please note that the current version of `bsd_distance.py` is under development. It is not a final version and requires further improvements and testing to ensure robustness and accuracy in various use cases.
 
-#### Requirements
+#### Requirements :clipboard:
 - Python 3.x
 - `ete3` Python package
 
-#### Installation
+#### Installation :wrench:
 Ensure Python 3 and `ete3` are installed. You can install `ete3` via pip if it's not already installed:
 ```bash
 pip install ete3
 ```
 
-#### Usage
+#### Usage :bulb:
 Run the script using the command:
 ```bash
 python3 bsd_distance.py -i <input.newick> <k> -o <output.txt>
@@ -29,7 +29,7 @@ python3 bsd_distance.py -i <input.newick> <k> -o <output.txt>
 - `<k>`: Integer value of k for the k-nearest common leaves algorithm.
 - `<output.txt>`: File where the output will be saved.
 
-#### Example
+#### Example :bookmark:
 Given an input file `example.newick` with the following content:
 ```
 (A:0.1,B:0.2,(C:0.3,D:0.4):0.5);
@@ -40,14 +40,14 @@ Run the script as:
 python3 bsd_distance.py -i example.newick 2 -o output.txt
 ```
 
-#### Output
+#### Output :book:
 The `output.txt` file will contain:
 - Completed versions of each tree pair.
 - BSD(+) distances between the completed trees.
 - Pruned versions of the trees on their common taxa.
 - BSD(-) distances for the pruned trees.
 
-#### Notes
+#### Notes :pencil:
 - Ensure the input Newick file is correctly formatted.
 - The script handles trees with no common leaves by joining them under a new root.
 - The BSD(+) calculations assume the trees are correctly parsed and all necessary functions are implemented.
