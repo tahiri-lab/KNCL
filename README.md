@@ -2,6 +2,7 @@
 **k-Nearest Common Leaves: phylogenetic tree completion and distance calculation**
 
 > The results of this work were submitted to [RECOMB-CG 2024](http://recomb-cg.org/), the 21st Annual Satellite Conference of RECOMB on Comparative Genomics:
+>
 > Koshkarov, A. & Tahiri, N. (2024). Novel algorithm for comparing phylogenetic trees with different but overlapping taxa. In RECOMB International Workshop on Comparative Genomics.
 
 #### Description :bookmark_tabs:
