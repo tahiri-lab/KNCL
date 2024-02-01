@@ -6,7 +6,7 @@
 > Koshkarov, A. & Tahiri, N. (2024). Novel algorithm for comparing phylogenetic trees with different but overlapping taxa. In RECOMB International Workshop on Comparative Genomics.
 
 #### Description :bookmark_tabs:
-`bsd_distance.py` is a Python script designed to complete 2 phylogenetic trees defined on different but mutually overlapping sets of taxa on the union of their taxa sets and calculate the Branch Score Distance (BSD(+)) between completed phylogenetic trees. The BSD is a measure of the dissimilarity between two trees based on their branch lengths. The script processes trees in Newick format, comparing the first tree in the input file with every other tree. It outputs the completed versions of these trees, their BSD(+) distance, the pruned versions of the trees, and the BSD(-) distance.
+`bsd_distance.py` is a Python script designed to complete 2 phylogenetic trees defined on different but mutually overlapping sets of taxa on the union of their taxa sets and compute the Branch Score Distance (BSD(+)) between the completed phylogenetic trees. The BSD is a measure of the dissimilarity between two trees based on their branch lengths. The script processes trees in Newick format, comparing the first tree in the input file with every other tree. It outputs the completed versions of these trees, their BSD(+) distance, the pruned versions of the trees, and the BSD(-) distance.
 
 >:pushpin: **Current Status**
 >
