@@ -3,7 +3,7 @@
 
 > The results of this work will be submitted.
 >
-> Koshkarov, A. & Tahiri, N. (2024). Novel algorithm for comparing phylogenetic trees with different but overlapping taxa, (in progress).
+> Koshkarov, A. & Tahiri, N. (2024). *k*-Nearest Common Leaves algorithm for phylogenetic tree completion (in progress).
 
 #### Description :bookmark_tabs:
 `bsd_distance.py` is a Python script designed to complete 2 phylogenetic trees defined on different but mutually overlapping sets of taxa on the union of their taxa sets and compute the Branch Score Distance (BSD(+)) between the completed phylogenetic trees. The BSD is a measure of the dissimilarity between two trees based on their branch lengths. The script processes trees in Newick format, comparing the first tree in the input file with every other tree. It outputs the completed versions of these trees, their BSD(+) distance, the pruned versions of the trees, and the BSD(-) distance.
@@ -55,3 +55,5 @@ The `output.txt` file will contain:
 - The BSD(+) calculations assume the trees are correctly parsed and all necessary functions are implemented.
 
 The description of the k-Nearest Common Leaves algorithm can be found [here](https://github.com/tahiri-lab/KNCL/blob/main/algorithm.md).
+
+Debugging of the updated version of the *k*-NCL algorithm is in progress.
