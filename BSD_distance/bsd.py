@@ -66,7 +66,7 @@ def main(input_file, output_file):
             # Calculate BSD
             bsd = calculate_BSD(tree1, tree2, common_leaves)
             bsd_rounded = round(bsd, 4)
-            out.write(f"BSD(+): {bsd_rounded}\n")
+            out.write(f"BSD: {bsd_rounded}\n")
         else:
             # Prune trees and calculate BSD-minus
             pruned_tree1 = prune_to_common_leaves(tree1, common_leaves)
