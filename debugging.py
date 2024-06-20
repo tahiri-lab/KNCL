@@ -1,10 +1,8 @@
 #Debugging of the updated version of the k-NCL algorithm
 
 from ete3 import Tree
-import copy
 import itertools
 
-# Function to generate unique names for temporary leaves
 def generate_temp_name(base, counter):
     return f"temp_{base}_{next(counter)}"
 
@@ -66,6 +64,62 @@ def k_nearest_common_leaves(tree, element, common_leaves, k):
     nearest_leaves = [leaf for leaf, distance in distances[:k]]
     return nearest_leaves
 
+def insert_temp_leaf_on_branch(node, temp_leaf_name, temp_distance):
+    new_internal = Tree()
+    new_internal.dist = temp_distance
+    new_internal.name = temp_leaf_name + "_int"
+    new_internal.add_child(node.detach())
+    parent = node.up
+    parent.add_child(new_internal)
+    new_internal.add_child(Tree(name=temp_leaf_name))
+    return new_internal
+
+def insert_temp_leaves(tree, common_leaf, temp_distance, counter):
+    temp_leaves = []
+    nodes = tree.search_nodes(name=common_leaf)
+    if not nodes:
+        raise ValueError(f"Node {common_leaf} not found in the tree.")
+    common_leaf_node = nodes[0]
+
+    if temp_distance <= 0:
+        raise ValueError(f"Invalid temp_distance {temp_distance} for {common_leaf}")
+
+    if temp_distance <= common_leaf_node.dist:
+        temp_leaf_name = generate_temp_name(common_leaf, counter)
+        temp_leaf = insert_temp_leaf_on_branch(common_leaf_node, temp_leaf_name, temp_distance)
+        temp_leaves.append(temp_leaf)
+        print(f"Inserted temporary leaf for {common_leaf} directly on branch with distance {temp_distance}")
+        return temp_leaves
+
+    path = common_leaf_node.get_ancestors()
+    accumulated_distance = 0
+
+    print(f"Inserting temporary leaf for {common_leaf} with temp_distance: {temp_distance}")
+
+    for node in path:
+        print(f"Traversing node: {node.name}, accumulated_distance: {accumulated_distance}, node.dist: {node.dist}")
+        if node.dist:
+            accumulated_distance += node.dist
+            if accumulated_distance >= temp_distance:
+                temp_leaf_name = generate_temp_name(common_leaf, counter)
+                temp_leaf = insert_temp_leaf_on_branch(node, temp_leaf_name, temp_distance - (accumulated_distance - node.dist))
+                temp_leaves.append(temp_leaf)
+                break
+
+    if not temp_leaves:
+        total_distance = sum(node.dist for node in path if node.dist)
+        print(f"Total available distance: {total_distance}")
+        if total_distance >= temp_distance:
+            raise ValueError(f"Could not insert temporary leaf for {common_leaf} at distance {temp_distance}.")
+        else:
+            # Fallback: insert at the last possible position
+            temp_leaf_name = generate_temp_name(common_leaf, counter)
+            temp_leaf = insert_temp_leaf_on_branch(common_leaf_node, temp_leaf_name, temp_distance - total_distance)
+            temp_leaves.append(temp_leaf)
+            print(f"Fallback insertion at total_distance: {total_distance}")
+
+    return temp_leaves
+
 def compute_midpoint(tree, temp_leaves):
     if len(temp_leaves) < 2:
         raise ValueError("Not enough temporary leaves to compute midpoint.")
@@ -105,58 +159,6 @@ def traverse_tree(tree, distant_pair, half_distance):
 
     raise ValueError("Could not find the midpoint in the tree.")
 
-def insert_temp_leaves(tree, common_leaf, temp_distance, counter):
-    temp_leaves = []
-    nodes = tree.search_nodes(name=common_leaf)
-    if not nodes:
-        raise ValueError(f"Node {common_leaf} not found in the tree.")
-    common_leaf_node = nodes[0]
-
-    if temp_distance <= 0:
-        raise ValueError(f"Invalid temp_distance {temp_distance} for {common_leaf}")
-
-    if temp_distance <= common_leaf_node.dist:
-        temp_leaf_name = generate_temp_name(common_leaf, counter)
-        temp_leaf = Tree(name=temp_leaf_name)
-        temp_leaf.dist = temp_distance
-        common_leaf_node.add_child(temp_leaf)
-        temp_leaves.append(temp_leaf)
-        print(f"Inserted temporary leaf for {common_leaf} directly on branch with distance {temp_distance}")
-        return temp_leaves
-
-    path = common_leaf_node.get_ancestors()
-    accumulated_distance = 0
-
-    print(f"Inserting temporary leaf for {common_leaf} with temp_distance: {temp_distance}")
-
-    for node in path:
-        print(f"Traversing node: {node.name}, accumulated_distance: {accumulated_distance}, node.dist: {node.dist}")
-        if node.dist:
-            accumulated_distance += node.dist
-            if accumulated_distance >= temp_distance:
-                temp_leaf_name = generate_temp_name(common_leaf, counter)
-                temp_leaf = Tree(name=temp_leaf_name)
-                temp_leaf.dist = temp_distance - (accumulated_distance - node.dist)
-                temp_leaves.append(temp_leaf)
-                node.add_child(temp_leaf)
-                break
-
-    if not temp_leaves:
-        total_distance = sum(node.dist for node in path if node.dist)
-        print(f"Total available distance: {total_distance}")
-        if total_distance >= temp_distance:
-            raise ValueError(f"Could not insert temporary leaf for {common_leaf} at distance {temp_distance}.")
-        else:
-            # Fallback: insert at the last possible position
-            temp_leaf_name = generate_temp_name(common_leaf, counter)
-            temp_leaf = Tree(name=temp_leaf_name)
-            temp_leaf.dist = temp_distance - total_distance
-            temp_leaves.append(temp_leaf)
-            common_leaf_node.add_child(temp_leaf)
-            print(f"Fallback insertion at total_distance: {total_distance}")
-
-    return temp_leaves
-
 def k_ncl_algorithm(tree1, tree2, k):
     common_leaves = set(leaf.name for leaf in tree1.iter_leaves()) & set(leaf.name for leaf in tree2.iter_leaves())
     completed_tree1 = tree1.copy()
@@ -170,7 +172,9 @@ def k_ncl_algorithm(tree1, tree2, k):
         adjustment_rate = compute_adjustment_rate(tree, other_tree, common_leaves)
 
         for element in sd_elements:
+            print(f"Processing element: {element.name}")
             nearest_common_leaves = k_nearest_common_leaves(tree, element, common_leaves, k)
+            print(f"Nearest common leaves for {element.name}: {nearest_common_leaves}")
             temp_leaves = []
 
             for common_leaf in nearest_common_leaves:
@@ -183,27 +187,38 @@ def k_ncl_algorithm(tree1, tree2, k):
                     continue
 
                 print(f"Inserting temporary leaf for {common_leaf} with temp_distance: {adjusted_distance}")
-                temp_leaves.extend(insert_temp_leaves(other_tree, common_leaf, adjusted_distance, counter))
+                try:
+                    temp_leaves.extend(insert_temp_leaves(other_tree, common_leaf, adjusted_distance, counter))
+                except ValueError as e:
+                    print(f"Error inserting temporary leaf for {common_leaf}: {e}")
 
             print(f"Temp leaves for element {element.name}: {temp_leaves}")
-            if temp_leaves:
-                midpoint = compute_midpoint(other_tree, [leaf.name for leaf in temp_leaves])
+            if len(temp_leaves) == 1:
+                # Insert the new element at the position of the single temporary leaf
+                single_temp_leaf = temp_leaves[0]
                 new_element = Tree(name=element.name)
                 new_element.dist = element.dist * adjustment_rate
-                midpoint.add_child(new_element)
+                single_temp_leaf.add_child(new_element)
+                print(f"Inserted new element {element.name} at position of single temporary leaf {single_temp_leaf.name}")
+            elif temp_leaves:
+                midpoint = compute_midpoint(other_tree, [leaf.name for leaf in temp_leaves])
+                if midpoint:
+                    new_element = Tree(name=element.name)
+                    new_element.dist = element.dist * adjustment_rate
+                    midpoint.add_child(new_element)
+                    print(f"Inserted new element {element.name} at midpoint {midpoint.name}")
             else:
-                print(f"Skipping element {element.name} due to no valid temp leaves.")
+                print(f"No temporary leaves found for element {element.name}")
 
     return completed_tree1, completed_tree2
 
 # Testing
-tree1 = Tree("((A:0.1,B:0.2):0.3,(C:0.4,D:0.5):0.6,E:0.7);")
-tree2 = Tree("((A:0.15,(F:0.25,G:0.35):0.45):0.55,(C:0.65,D:0.75):0.85);")
+tree1 = Tree("((A:0.5,B:0.3):0.7,(C:0.6,D:0.4):0.8);")
+tree2 = Tree("((A:0.6,E:0.4):0.9,(C:0.5,F:0.7):0.6);")
+completed_tree1, completed_tree2 = k_ncl_algorithm(tree1, tree2, 3)
 
-completed_tree1, completed_tree2 = k_ncl_algorithm(tree1, tree2, k=3)
 completed_tree1.write(outfile="completed_tree1.nwk")
 completed_tree2.write(outfile="completed_tree2.nwk")
 
 print(completed_tree1)
 print(completed_tree2)
-
