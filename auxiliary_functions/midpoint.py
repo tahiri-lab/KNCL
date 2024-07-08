@@ -54,6 +54,32 @@ def insert_midpoint(tree, diameter_path):
 
     return tree
 
+def insert_midpoint_and_new_leaf(tree, diameter_path, new_leaf_name, branch_length):
+    total_distance = sum(node.dist for node in diameter_path)
+    half_distance = total_distance / 2
+    cumulative_distance = 0
+    for i, node in enumerate(diameter_path):
+        cumulative_distance += node.dist
+        if cumulative_distance >= half_distance:
+            break
+
+    midpoint_position = diameter_path[i]
+    parent = midpoint_position.up
+
+    new_node = Tree(name="midpoint")
+    new_node.dist = midpoint_position.dist / 2
+    midpoint_position.dist /= 2
+
+    parent.add_child(new_node)
+    new_node.add_child(midpoint_position.detach())
+
+    print(f"Inserting new leaf '{new_leaf_name}' with branch length {branch_length} at midpoint")
+    new_leaf = Tree(name=new_leaf_name)
+    new_leaf.dist = branch_length
+    new_node.add_child(new_leaf)
+
+    return tree
+
 # Example
 
 newick = "((A:1.5,B:1.2):2,(C:1.9,D:0.1):2);"
