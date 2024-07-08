@@ -53,3 +53,15 @@ def insert_midpoint(tree, diameter_path):
     new_node.add_child(midpoint_position.detach())
 
     return tree
+
+# Example
+
+newick = "((A:1.5,B:1.2):2,(C:1.9,D:0.1):2);"
+tree = Tree(newick, format=1)
+
+temporary_leaves = {tree & "A", tree & "C", tree & "D"}
+
+midpoint_position, diameter_path = compute_midpoint(tree, temporary_leaves)
+tree = insert_midpoint(tree, diameter_path)
+
+print(tree.write(format=1))
