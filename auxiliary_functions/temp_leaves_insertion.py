@@ -1,50 +1,48 @@
-# Inserting temporary leaves into a phylogenetic tree
+# Case 1: insert a temporary leaf on the terminal branch of the target leaf
 
-import io
-from Bio import Phylo
-from Bio.Phylo.Newick import Clade
+from ete3 import Tree
 
-def insert_temp_leaves(tree, leaf_distances):
-    def traverse_and_insert(clade, target_leaf, branch_length, distance, current_distance=0):
-        new_clades = []
-        for sub_clade in clade.clades:
-            new_current_distance = current_distance + sub_clade.branch_length
-            if sub_clade.is_terminal() and sub_clade.name == target_leaf:
-                if distance < sub_clade.branch_length:
-                    insertion_length = distance - current_distance
-                    remaining_length = sub_clade.branch_length - insertion_length
-
-                    new_internal_clade = Clade(branch_length=insertion_length)
-                    temp_leaf = Clade(branch_length=branch_length, name=f"{target_leaf}_1")
-                    new_internal_clade.clades.append(temp_leaf)
-                    new_internal_clade.clades.append(Clade(branch_length=remaining_length, clades=[sub_clade]))
-
-                    clade.clades.remove(sub_clade)
-                    clade.clades.append(new_internal_clade)
-                else:
-                    temp_leaf = Clade(branch_length=branch_length, name=f"{target_leaf}_1")
-                    clade.clades.append(temp_leaf)
-                return True  # Stop recursion once the target leaf is found
-            else:
-                if traverse_and_insert(sub_clade, target_leaf, branch_length, distance, new_current_distance):
-                    return True
-        return False
-
-    for leaf_info in leaf_distances:
-        leaf, branch_length, distance = leaf_info.split(':')
-        branch_length = float(branch_length)
-        distance = float(distance)
+def insert_leaf(newick, target_leaf, new_leaf, new_length, dist):
+    # Parse the Newick format tree
+    tree = Tree(newick, format=1)
+    
+    # Find the target leaf node
+    node = tree.search_nodes(name=target_leaf)[0]
+    
+    # Ensure the distance is not greater than the branch length of the target leaf
+    if dist > node.dist:
+        raise ValueError("Distance is greater than the branch length of the target leaf.")
+    
+    # If dist is less than the node's distance, we need to create a new internal node
+    if dist < node.dist:
+        # Calculate the remaining distance of the original branch after insertion
+        remaining_dist = node.dist - dist
         
-        traverse_and_insert(tree.root, leaf, branch_length, distance)
+        # Detach the node temporarily
+        parent = node.up
+        node.detach()
+        
+        # Create a new internal node and attach it to the original parent
+        new_internal_node = parent.add_child(dist=dist)
+        
+        # Reattach the original node and add the new leaf
+        node.dist = remaining_dist
+        new_internal_node.add_child(node)
+        new_internal_node.add_child(name=new_leaf, dist=new_length)
+    else:
+        # If dist equals the node's distance, attach directly to the node
+        node.add_child(name=new_leaf, dist=new_length)
 
+    # Return the modified tree in Newick format
     return tree
 
-# Testing
-newick_str = "((A:0.5,B:0.3):0.7,(C:0.6,D:0.4):0.8);"
-tree = Phylo.read(io.StringIO(newick_str), "newick")
+# Example
+newick = "(A:0.5,(B:0.3,C:0.4):0.7);"
+target_leaf = "C"
+new_leaf = "L"
+new_length = 0.2
+dist = 0.1
 
-leaf_distances = ['A:0.6:1.22', 'B:0.4:0.2'] #branch lengths for temporary leaves and target distances from selected common leaves
-modified_tree = insert_temp_leaves(tree, leaf_distances)
-
-# Print the modified tree
-Phylo.write(modified_tree, sys.stdout, "newick")
+# Insert the leaf and print the new tree
+new_tree = insert_leaf(newick, target_leaf, new_leaf, new_length, dist)
+print(new_tree)
