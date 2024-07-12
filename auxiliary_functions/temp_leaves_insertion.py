@@ -73,10 +73,10 @@ def insert_leaf(newick, target_leaf, new_leaf, new_length, dist):
 
     # Perform the insertion
     excess_length = current_node.dist - insert_distance
-    new_internal_node = current_node.up.add_child(dist=insert_distance)
+    new_internal_node = current_node.up.add_child(dist=excess_length)
     
     current_node.detach()
-    new_internal_node.add_child(current_node, dist=excess_length)
+    new_internal_node.add_child(current_node, dist=insert_distance)
     new_internal_node.add_child(name=new_leaf, dist=new_length)
 
     return tree
