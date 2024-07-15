@@ -96,3 +96,87 @@ print("Insertion at smaller distance:", new_tree1)
 print(new_tree1.write(format=1))
 print("Insertion at larger distance:", new_tree2)
 print(new_tree2.write(format=1))
+
+Case 3. Universal approach
+
+from ete3 import Tree
+
+def insert_leaf_from_target(newick, target_leaf, new_leaf_base_name, new_length, dist):
+    tree = Tree(newick, format=1)
+    target_node = tree.search_nodes(name=target_leaf)[0]
+    insertion_points = []  # Store nodes and distances where inserts will be made
+    ignored_nodes = set()  # Track nodes to be ignored during traversal
+
+    # Function to perform the insertion at a given node with calculated distances
+    def perform_insertion(node, insert_distance):
+        excess_length = node.dist - insert_distance
+        if node.up:
+            new_internal_node = node.up.add_child(dist=insert_distance)
+            node.detach()
+            new_internal_node.add_child(node, dist=excess_length)
+            new_leaf_name = f"{new_leaf_base_name}{len(insertion_points) + 1}"
+            new_leaf = new_internal_node.add_child(name=new_leaf_name, dist=new_length)
+            insertion_points.append(new_internal_node)  # Record the insertion
+            ignored_nodes.add(new_internal_node)  # Ignore this newly created node in further traversals
+            ignored_nodes.add(new_leaf)  # Also ignore the new leaf
+            print(f"Inserted '{new_leaf_name}' at node '{node.name}' with insert distance {insert_distance} and excess length {excess_length}")
+            return new_internal_node
+        return None
+
+    # Traverse upwards from the target node
+    def traverse_upwards(node, accumulated_distance):
+        current_distance = accumulated_distance + node.dist
+        print(f"Traversing upwards through '{node.name}' with current distance {current_distance}")
+        if current_distance >= dist:
+            insert_distance = current_distance - dist
+            if insert_distance <= node.dist:
+                inserted_node = perform_insertion(node, insert_distance)
+                if inserted_node:
+                    return True  # Stop traversing upwards once a valid insertion is made
+        if node.up:
+            return traverse_upwards(node.up, current_distance)
+        return False
+
+    # Traverse downwards from the target node
+    def traverse_downwards(node, accumulated_distance):
+        if node in ignored_nodes:
+            return  # Skip nodes that should be ignored
+
+        current_distance = accumulated_distance + node.dist
+        print(f"Traversing downwards from '{node.name}' with current distance {current_distance}")
+        if current_distance >= dist:
+            insert_distance = current_distance - dist
+            if insert_distance <= node.dist:
+                inserted_node = perform_insertion(node, insert_distance)
+                if inserted_node:
+                    ignored_nodes.add(inserted_node)
+        for child in node.children:
+            if child not in ignored_nodes:
+                traverse_downwards(child, current_distance)  # Accumulate the distance properly
+
+    # Start traversal from the target node upwards
+    traverse_upwards(target_node, 0)
+
+    # Start traversal from the parent node of the target node downwards
+    if target_node.up:
+        for sibling in target_node.up.children:
+            if sibling != target_node:
+                traverse_downwards(sibling, target_node.dist)
+
+    # Output the results
+    if insertion_points:
+        print("Final tree with all inserted leaves:")
+        print(tree.write(format=1))
+        print(tree)
+    else:
+        print("No valid insertion points were found based on the specified distance.")
+
+# Example
+newick = "(A:0.5,((B:0.3,C:1.9):0.7,D:0.5):0.8);"
+target_leaf = "C"
+new_leaf_base_name = "L"
+new_length = 0.2
+dist = 2.1  # Distance to test for multiple possible insertions
+
+# Insert new leaves and check the tree structure
+insert_leaf_from_target(newick, target_leaf, new_leaf_base_name, new_length, dist)
