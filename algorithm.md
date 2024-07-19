@@ -7,6 +7,7 @@ The $k$-Nearest Common Leaves algorithm can be summarized at a high level as fol
 
 ![k-Nearest Common Leaves Algorithm](https://github.com/tahiri-lab/KNCL/blob/main/img/k-ncl.png "k-NCL")
 
+Auxiliary functions can be found [here](https://github.com/tahiri-lab/KNCL/tree/main/auxiliary_functions).
 
 As a result, we obtain 2 phylogenetic trees $T_1^{\uplus}$ and $T_2^{\uplus}$ defined on the same set of taxa (on the union of the sets of leaves of the initial trees $L(T_1) \cup L(T_2)$ ). The following formula is used to calculate the distance between these trees:
 
