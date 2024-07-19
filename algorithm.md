@@ -5,7 +5,7 @@ We have 2 phylogenetic trees in Newick format. These trees have different but ov
 
 The $k$-Nearest Common Leaves algorithm can be summarized at a high level as follows. The algorithm begins by identifying the common leaves, distinct leaves, and maximal distinct-leaf subtrees in both phylogenetic trees. Next, it calculates the branch adjustment rates to ensure that evolutionary distances are preserved when integrating distinct leaves and subtrees. Temporary leaves are then placed at specific positions within the tree to facilitate this integration. The algorithm computes midpoints among the temporary leaves to determine the insertion points for the distinct leaves. Finally, the distinct leaves are inserted into the tree at these midpoints, with branch lengths adjusted proportionally to maintain the evolutionary relationships and distances. The pseudocode of the algorithm is shown below.
 
-![k-Nearest Common Leaves Algorithm](https://github.com/tahiri-lab/KNCL/blob/main/img/k-ncl.png "k-NCL")
+![k-Nearest Common Leaves Algorithm](https://github.com/tahiri-lab/KNCL/blob/main/img/kncl.png "k-NCL")
 
 Auxiliary functions can be found [here](https://github.com/tahiri-lab/KNCL/tree/main/auxiliary_functions).
 
