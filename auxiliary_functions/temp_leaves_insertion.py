@@ -191,31 +191,22 @@ def insert_leaf_from_target(newick, target_leaf, new_leaf_base_name, new_length,
     insertion_points = []  # Store nodes where inserts will be made
     visited_nodes = set()  # Set to track visited nodes
 
-    # Label internal nodes for easier tracking
-    internal_node_counter = 1
-    for node in tree.traverse("postorder"):
-        if not node.is_leaf() and not node.name:
-            node.name = f"Node{internal_node_counter}"
-            internal_node_counter += 1
-
     def insert_leaf_at_node(parent_node, insert_distance, previous_node):
         excess_length = parent_node.dist - insert_distance
-        new_internal_node = parent_node.up.add_child(dist=insert_distance) if parent_node.up else tree.add_child(dist=insert_distance)
+        new_internal_node = parent_node.up.add_child(dist=excess_length) if parent_node.up else tree.add_child(dist=excess_length)
         parent_node.detach()
-        new_internal_node.add_child(parent_node, dist=excess_length)
+        new_internal_node.add_child(parent_node, dist=insert_distance)
         new_leaf_name = f"{new_leaf_base_name}{len(insertion_points) + 1}"
         new_internal_node.add_child(name=new_leaf_name, dist=new_length)
         insertion_points.append(new_internal_node)
         visited_nodes.add(new_internal_node)
         visited_nodes.add(new_internal_node.children[1])  # Newly added leaf node
-        print(f"Inserted '{new_leaf_name}' at '{parent_node.name}' with insert distance {insert_distance} and excess length {excess_length}")
 
     def dfs(node, accumulated_distance, previous_node=None, previous_distance=0):
         if node in visited_nodes:
             return
         visited_nodes.add(node)
 
-        print(f"Traversing '{node.name}' with accumulated distance: {accumulated_distance}")
         if accumulated_distance >= dist:
             insert_distance = accumulated_distance - dist
             if node.is_leaf():
@@ -247,12 +238,11 @@ def insert_leaf_from_target(newick, target_leaf, new_leaf_base_name, new_length,
         print("No valid insertion points were found based on the specified distance.")
 
 # Example
-newick = "(A:0.5,((B:0.3,C:1.9)Node1:0.7,D:0.5)Node2:0.8);"
+newick = "(A:0.5,((B:0.3,C:1.9):0.7,D:0.5):0.8);"
 target_leaf = "C"
-new_leaf_base_name = "L"
+new_leaf_base_name = "C" # We use the same name as target_leaf to know which leaf the new leaves were inserted based on
 new_length = 0.2
 dist = 2  # Distance to test for multiple possible insertions
 
 # Insert new leaves and check the tree structure
 insert_leaf_from_target(newick, target_leaf, new_leaf_base_name, new_length, dist)
-
