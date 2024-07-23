@@ -184,69 +184,59 @@ insert_leaf_from_target(newick, target_leaf, new_leaf_base_name, new_length, dis
 # Case 4. Unified approach
 
 from ete3 import Tree
-from collections import deque
 
 def insert_leaf_from_target(newick, target_leaf, new_leaf_base_name, new_length, dist):
     tree = Tree(newick, format=1)
     target_node = tree.search_nodes(name=target_leaf)[0]
-    insertion_points = []  # Store nodes and distances where inserts will be made
-    visited_nodes = set()  # Prevent revisiting nodes, especially newly inserted ones
+    insertion_points = []  # Store nodes where inserts will be made
+    visited_nodes = set()  # Set to track visited nodes
 
-    def perform_insertion(node, insert_distance):
-        if 0 <= insert_distance <= node.dist:
-            excess_length = node.dist - insert_distance
-            new_internal_node = node.up.add_child(dist=insert_distance) if node.up else node.add_child(dist=insert_distance)
-            node.detach()
-            new_internal_node.add_child(node, dist=excess_length)
-            new_leaf_name = f"{new_leaf_base_name}{len(insertion_points) + 1}"
-            new_internal_node.add_child(name=new_leaf_name, dist=new_length)
-            insertion_points.append(new_internal_node)
-            visited_nodes.add(new_internal_node)  # Avoid revisiting new nodes
-            visited_nodes.add(new_leaf_name)  # Avoid revisiting new nodes
-            print(f"Inserted '{new_leaf_name}' at '{node.name}' with insert distance {insert_distance} and excess length {excess_length}")
-            return True
-        return False
+    # Label internal nodes for easier tracking
+    internal_node_counter = 1
+    for node in tree.traverse("postorder"):
+        if not node.is_leaf() and not node.name:
+            node.name = f"Node{internal_node_counter}"
+            internal_node_counter += 1
 
-    def calculate_accumulated_distance(start_node, end_node):
-        distance = 0
-        node = start_node
-        while node != end_node:
-            if node.up == end_node or (node.up and node.dist < end_node.dist):
-                distance += node.dist
-                node = node.up
+    def insert_leaf_at_node(parent_node, insert_distance, previous_node):
+        excess_length = parent_node.dist - insert_distance
+        new_internal_node = parent_node.up.add_child(dist=insert_distance) if parent_node.up else tree.add_child(dist=insert_distance)
+        parent_node.detach()
+        new_internal_node.add_child(parent_node, dist=excess_length)
+        new_leaf_name = f"{new_leaf_base_name}{len(insertion_points) + 1}"
+        new_internal_node.add_child(name=new_leaf_name, dist=new_length)
+        insertion_points.append(new_internal_node)
+        visited_nodes.add(new_internal_node)
+        visited_nodes.add(new_internal_node.children[1])  # Newly added leaf node
+        print(f"Inserted '{new_leaf_name}' at '{parent_node.name}' with insert distance {insert_distance} and excess length {excess_length}")
+
+    def dfs(node, accumulated_distance, previous_node=None, previous_distance=0):
+        if node in visited_nodes:
+            return
+        visited_nodes.add(node)
+
+        print(f"Traversing '{node.name}' with accumulated distance: {accumulated_distance}")
+        if accumulated_distance >= dist:
+            insert_distance = accumulated_distance - dist
+            if node.is_leaf():
+                # Insert new leaf at the correct branch between the node and its parent
+                insert_leaf_at_node(node, insert_distance, node)
             else:
-                for child in node.children:
-                    if end_node in child.get_descendants():
-                        distance += child.dist
-                        node = child
-                        break
-        return distance
+                # Insert new leaf at the correct branch between the previous node and the current node
+                insert_leaf_at_node(previous_node, previous_distance - insert_distance, previous_node)
+            return
 
-    def traverse_tree(node, accumulated_distance):
-        queue = deque([(node, accumulated_distance)])
-        visited = set()
+        # Traverse children
+        for child in node.children:
+            if child not in visited_nodes:  # Avoid traversing newly added leaves
+                dfs(child, accumulated_distance + child.dist, node, child.dist)
 
-        while queue:
-            current_node, current_dist = queue.popleft()
-            if current_node in visited or current_node in visited_nodes:
-                continue
-            visited.add(current_node)
-            print(f"Traversing '{current_node.name}' with accumulated distance: {current_dist}")
+        # Traverse parent
+        if node.up and node.up not in visited_nodes:  # Avoid traversing newly added internal nodes
+            dfs(node.up, accumulated_distance + node.dist, node, node.dist)
 
-            if current_dist >= dist:
-                insert_distance = current_dist - dist
-                if perform_insertion(current_node, insert_distance):
-                    return  # Stop further traversal after successful insertion
-
-            for child in current_node.children:
-                if child not in visited and child not in visited_nodes:
-                    queue.append((child, current_dist + child.dist))
-
-            if current_node.up and current_node.up not in visited and current_node.up not in visited_nodes:
-                queue.append((current_node.up, current_dist + current_node.dist))
-
-    # Start the traversal from the target node
-    traverse_tree(target_node, 0)
+    # Start the DFS traversal from the target node
+    dfs(target_node, 0)
 
     # Output the final results
     if insertion_points:
@@ -257,7 +247,7 @@ def insert_leaf_from_target(newick, target_leaf, new_leaf_base_name, new_length,
         print("No valid insertion points were found based on the specified distance.")
 
 # Example
-newick = "(A:0.5,((B:0.3,C:1.9):0.7,D:0.5):0.8);"
+newick = "(A:0.5,((B:0.3,C:1.9)Node1:0.7,D:0.5)Node2:0.8);"
 target_leaf = "C"
 new_leaf_base_name = "L"
 new_length = 0.2
