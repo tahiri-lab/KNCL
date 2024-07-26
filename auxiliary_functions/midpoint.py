@@ -1,4 +1,4 @@
-# Finding the midpoint among a set of temporary leaves TL
+# Finding the midpoint among a set of temporary leaves TL and inserting a new leaf at the midpoint
 
 from ete3 import Tree
 
@@ -54,11 +54,9 @@ def compute_midpoint(tree, temporary_leaves):
 
     midpoint_position = diameter_path[i]
     print(f"Midpoint position: {midpoint_position.name}")
-    return midpoint_position, diameter_path
+    return midpoint_position, diameter_path, half_distance
 
-def insert_midpoint_and_new_leaf(tree, diameter_path, new_leaf_name, branch_length):
-    total_distance = sum(node.dist for node in diameter_path)
-    half_distance = total_distance / 2
+def insert_midpoint_and_new_leaf(tree, diameter_path, half_distance, new_leaf_name, branch_length):
     cumulative_distance = 0
     for i, node in enumerate(diameter_path):
         cumulative_distance += node.dist
@@ -68,9 +66,13 @@ def insert_midpoint_and_new_leaf(tree, diameter_path, new_leaf_name, branch_leng
     midpoint_position = diameter_path[i]
     parent = midpoint_position.up
 
+    # Calculate the exact distance to the midpoint for accurate split
+    distance_to_midpoint = cumulative_distance - half_distance
+    print(f"Distance to midpoint: {distance_to_midpoint}")
+
     new_node = Tree(name="midpoint")
-    new_node.dist = midpoint_position.dist / 2
-    midpoint_position.dist /= 2
+    new_node.dist = distance_to_midpoint
+    midpoint_position.dist -= distance_to_midpoint
 
     parent.add_child(new_node)
     new_node.add_child(midpoint_position.detach())
@@ -83,20 +85,21 @@ def insert_midpoint_and_new_leaf(tree, diameter_path, new_leaf_name, branch_leng
     return tree
 
 # Example
-if __name__ == "__main__":
-    newick = "((A:1.5,B:1.2):2,(C:1.9,D:0.1):2);"
-    tree = Tree(newick, format=1)
 
-    print("Original tree:")
-    print(tree)
+newick = "((A:1.5,B:1.2):1.5,(C:1.9,D:0.1):0.5);"
+tree = Tree(newick, format=1)
 
-    temporary_leaves = {tree & "A", tree & "C", tree & "D"}
-    new_leaf_name = "New_leaf"
-    branch_length = 1.5
+print("Original tree:")
+print(tree)
 
-    midpoint_position, diameter_path = compute_midpoint(tree, temporary_leaves)
-    tree = insert_midpoint_and_new_leaf(tree, diameter_path, new_leaf_name, branch_length)
+temporary_leaves = {tree & "A", tree & "C", tree & "D"}
 
-    print("Updated tree:")
-    print(tree)
-    print(tree.write(format=1))
+new_leaf_name = "New_leaf"
+branch_length = 1.5
+
+midpoint_position, diameter_path, half_distance = compute_midpoint(tree, temporary_leaves)
+tree = insert_midpoint_and_new_leaf(tree, diameter_path, half_distance, new_leaf_name, branch_length)
+
+print("Updated tree:")
+print(tree)
+print(tree.write(format=1))
