@@ -181,6 +181,14 @@ def compute_midpoint(tree, temporary_leaves):
     start = next(iter(temporary_leaves))
     leaf1, dist1 = find_farthest_leaf(tree, start, temporary_leaves)
     leaf2, dist2 = find_farthest_leaf(tree, leaf1, temporary_leaves)
+
+    # Determine the leaf closest to the root to use as the consistent endpoint
+    root_distances = {leaf1: tree.get_distance(tree.get_tree_root(), leaf1), leaf2: tree.get_distance(tree.get_tree_root(), leaf2)}
+    endpoint = max(root_distances, key=root_distances.get)
+
+    if endpoint == leaf2:
+        leaf1, leaf2 = leaf2, leaf1
+
     path = find_path(leaf1, leaf2)
     total_distance = dist2
     half_distance = total_distance / 2
@@ -201,8 +209,8 @@ def insert_midpoint_and_new_leaf(tree, prev_node, curr_node, excess, new_leaf_na
 
     # Calculate distances
     original_dist = prev_node.get_distance(curr_node)
-    distance_to_midpoint = original_dist - excess
-    distance_from_midpoint_to_leaf = excess
+    distance_to_midpoint = excess
+    distance_from_midpoint_to_leaf = original_dist - excess
 
     print(f"Original distance: {original_dist}, Distance to midpoint: {distance_to_midpoint}, Distance from midpoint to leaf: {distance_from_midpoint_to_leaf}")
 
@@ -210,6 +218,7 @@ def insert_midpoint_and_new_leaf(tree, prev_node, curr_node, excess, new_leaf_na
     new_node = Tree(name="midpoint")
     new_node.dist = distance_to_midpoint
 
+    # Attach new midpoint node correctly
     if prev_node.up == curr_node:
         parent = curr_node
         child = prev_node
@@ -219,15 +228,15 @@ def insert_midpoint_and_new_leaf(tree, prev_node, curr_node, excess, new_leaf_na
 
     print(f"Parent node: {parent.name}, Child node: {child.name}")
 
-    # Remove child from parent
+    # Remove the child from the parent
     parent.remove_child(child)
     print(f"Removed child {child.name} from parent {parent.name}")
 
-    # Add new midpoint node to parent
+    # Add the new midpoint node to the parent
     parent.add_child(new_node)
-    print(f"Added new midpoint node 'midpoint' to parent {parent.name} with distance {new_node.dist}")
+    print(f"Added new midpoint node 'midpoint' to parent {parent.name}")
 
-    # Reattach child to new midpoint node
+    # Reattach the child to the new midpoint node
     new_node.add_child(child)
     child.dist = distance_from_midpoint_to_leaf
     print(f"Reattached current node '{child.name}' to new midpoint node with distance {child.dist}")
@@ -238,7 +247,7 @@ def insert_midpoint_and_new_leaf(tree, prev_node, curr_node, excess, new_leaf_na
     new_node.add_child(new_leaf)
     print(f"Added new leaf '{new_leaf_name}' to midpoint node 'midpoint' with distance {new_leaf.dist}")
 
-    print(f"Inserted new internal node 'midpoint' with new leaf '{new_leaf_name}'")
+    print(f"Inserted new internal node 'midpoint' with new leaf '{new_leaf.name}'")
 
     return tree
 
@@ -249,7 +258,7 @@ label_internal_nodes(tree)
 print("Original tree with labeled nodes:")
 print(tree)
 
-temporary_leaves = {tree & "C2", tree & "D"}
+temporary_leaves = {tree & "C2", tree & "A"}
 new_leaf_name = "New_leaf"
 branch_length = 1.5
 
