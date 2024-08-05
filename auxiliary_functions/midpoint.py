@@ -184,6 +184,7 @@ def compute_midpoint(tree, temporary_leaves):
 
     # Determine the leaf closest to the root to use as the consistent endpoint
     root_distances = {leaf1: tree.get_distance(tree.get_tree_root(), leaf1), leaf2: tree.get_distance(tree.get_tree_root(), leaf2)}
+    #endpoint = min(root_distances, key=root_distances.get)
     endpoint = max(root_distances, key=root_distances.get)
 
     if endpoint == leaf2:
@@ -258,7 +259,7 @@ label_internal_nodes(tree)
 print("Original tree with labeled nodes:")
 print(tree)
 
-temporary_leaves = {tree & "C2", tree & "A"}
+temporary_leaves = {tree & "C2", tree & "D"}
 new_leaf_name = "New_leaf"
 branch_length = 1.5
 
@@ -268,3 +269,4 @@ tree = insert_midpoint_and_new_leaf(tree, prev_node, curr_node, excess, new_leaf
 print("Updated tree:")
 print(tree)
 print(tree.write(format=1))
+
