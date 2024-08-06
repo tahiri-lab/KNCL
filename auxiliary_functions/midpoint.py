@@ -189,30 +189,42 @@ def compute_midpoint(tree, temporary_leaves):
     leaf2, dist2 = find_farthest_leaf(tree, leaf1, temporary_leaves)
     path, branch_lengths = find_path(leaf1, leaf2)
     total_distance = dist2
-    half_distance = total_distance / 2
+    half_distance = round(total_distance / 2, 8)
 
     cumulative_distance = 0
     prev_node = None
     for i, node in enumerate(path):
         if i > 0:
-            cumulative_distance += branch_lengths[i - 1]
-        print(f"Node: {node.name}, Dist: {branch_lengths[i-1] if i > 0 else 0}, Cumulative distance: {cumulative_distance}")
+            cumulative_distance += round(branch_lengths[i - 1], 8)
+        print(f"Node: {node.name}, Dist: {round(branch_lengths[i-1], 8) if i > 0 else 0}, Cumulative distance: {round(cumulative_distance, 8)}")
         if cumulative_distance >= half_distance:
-            excess = cumulative_distance - half_distance
+            excess = round(cumulative_distance - half_distance, 8)
             prev_node = path[i - 1]
             print(f"Midpoint between {prev_node.name} and {node.name}, excess: {excess}")
             return prev_node, node, excess, half_distance, branch_lengths[i - 1]
+        elif cumulative_distance == half_distance:
+            prev_node = path[i - 1]
+            print(f"Exact midpoint at node {node.name}")
+            return prev_node, node, 0, half_distance, branch_lengths[i - 1]
 
 def insert_midpoint_and_new_leaf(tree, prev_node, curr_node, excess, new_leaf_name, branch_length, original_dist):
     print(f"Inserting new leaf between {prev_node.name} and {curr_node.name} with excess {excess}")
 
+    if excess == 0:
+        print(f"Inserting new leaf directly at node {curr_node.name}")
+        new_leaf = Tree(name=new_leaf_name)
+        new_leaf.dist = branch_length
+        curr_node.add_child(new_leaf)
+        print(f"Added new leaf '{new_leaf_name}' to node '{curr_node.name}' with distance {new_leaf.dist}")
+        return tree
+
     # Calculate distances
     if curr_node in prev_node.get_ancestors():
-        distance_to_midpoint = excess
-        distance_from_midpoint_to_leaf = original_dist - excess
+        distance_to_midpoint = round(excess, 8)
+        distance_from_midpoint_to_leaf = round(original_dist - excess, 8)
     else:
-        distance_to_midpoint = original_dist - excess
-        distance_from_midpoint_to_leaf = excess
+        distance_to_midpoint = round(original_dist - excess, 8)
+        distance_from_midpoint_to_leaf = round(excess, 8)
 
     print(f"Original distance: {original_dist}, Distance to midpoint: {distance_to_midpoint}, Distance from midpoint to leaf: {distance_from_midpoint_to_leaf}")
 
@@ -252,13 +264,13 @@ def insert_midpoint_and_new_leaf(tree, prev_node, curr_node, excess, new_leaf_na
     return tree
 
 # Example
-newick = "((A:2,A2:1.3):0.85,(D:0.5,((C:1.9,(B:0.2,C1:0.2):0.1):0.1,C2:0.2):0.6):0.8);"
+newick = "(A:0.5,(((B:0.3,C:1.9):0.7,(D:0.4,C1:0.2):0.1):0.1,C2:0.2):0.7);"
 tree = Tree(newick, format=1)
 label_internal_nodes(tree)
 print("Original tree with labeled nodes:")
 print(tree)
 
-temporary_leaves = {tree & "C2", tree & "D"}
+temporary_leaves = {tree & "C1", tree & "C2"}
 new_leaf_name = "New_leaf"
 branch_length = 1.5
 
