@@ -189,16 +189,16 @@ def compute_midpoint(tree, temporary_leaves):
     leaf2, dist2 = find_farthest_leaf(tree, leaf1, temporary_leaves)
     path, branch_lengths = find_path(leaf1, leaf2)
     total_distance = dist2
-    half_distance = round(total_distance / 2, 8)
+    half_distance = round(total_distance / 2, 10)
 
     cumulative_distance = 0
     prev_node = None
     for i, node in enumerate(path):
         if i > 0:
-            cumulative_distance += round(branch_lengths[i - 1], 8)
-        print(f"Node: {node.name}, Dist: {round(branch_lengths[i-1], 8) if i > 0 else 0}, Cumulative distance: {round(cumulative_distance, 8)}")
+            cumulative_distance += round(branch_lengths[i - 1], 10)
+        print(f"Node: {node.name}, Dist: {round(branch_lengths[i-1], 10) if i > 0 else 0}, Cumulative distance: {round(cumulative_distance, 10)}")
         if cumulative_distance >= half_distance:
-            excess = round(cumulative_distance - half_distance, 8)
+            excess = round(cumulative_distance - half_distance, 10)
             prev_node = path[i - 1]
             print(f"Midpoint between {prev_node.name} and {node.name}, excess: {excess}")
             return prev_node, node, excess, half_distance, branch_lengths[i - 1]
@@ -220,11 +220,11 @@ def insert_midpoint_and_new_leaf(tree, prev_node, curr_node, excess, new_leaf_na
 
     # Calculate distances
     if curr_node in prev_node.get_ancestors():
-        distance_to_midpoint = round(excess, 8)
-        distance_from_midpoint_to_leaf = round(original_dist - excess, 8)
+        distance_to_midpoint = round(excess, 10)
+        distance_from_midpoint_to_leaf = round(original_dist - excess, 10)
     else:
-        distance_to_midpoint = round(original_dist - excess, 8)
-        distance_from_midpoint_to_leaf = round(excess, 8)
+        distance_to_midpoint = round(original_dist - excess, 10)
+        distance_from_midpoint_to_leaf = round(excess, 10)
 
     print(f"Original distance: {original_dist}, Distance to midpoint: {distance_to_midpoint}, Distance from midpoint to leaf: {distance_from_midpoint_to_leaf}")
 
@@ -263,6 +263,13 @@ def insert_midpoint_and_new_leaf(tree, prev_node, curr_node, excess, new_leaf_na
 
     return tree
 
+def remove_temporary_leaves(tree, temporary_leaves):
+    for leaf in temporary_leaves:
+        if leaf.up:
+            parent = leaf.up
+            parent.remove_child(leaf)
+            print(f"Removed temporary leaf {leaf.name}")
+
 # Example
 newick = "(A:0.5,(((B:0.3,C:1.9):0.7,(D:0.4,C1:0.2):0.1):0.1,C2:0.2):0.7);"
 tree = Tree(newick, format=1)
@@ -277,6 +284,9 @@ branch_length = 1.5
 prev_node, curr_node, excess, half_distance, original_dist = compute_midpoint(tree, temporary_leaves)
 tree = insert_midpoint_and_new_leaf(tree, prev_node, curr_node, excess, new_leaf_name, branch_length, original_dist)
 
-print("Updated tree:")
+# Remove temporary leaves
+remove_temporary_leaves(tree, temporary_leaves)
+
+print("Updated tree after removing temporary leaves:")
 print(tree)
 print(tree.write(format=1))
