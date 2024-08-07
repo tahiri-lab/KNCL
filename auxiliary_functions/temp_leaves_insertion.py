@@ -70,7 +70,7 @@ newick = "(A:0.5,((B:0.3,C:1.9)Node1:0.7,D:0.5)Node2:0.8);"
 target_leaf = "C"
 new_leaf_base_name = "L"
 new_length = 0.2
-dist = 2.7  # Distance to test for multiple possible insertions
+dist = 1.9  # Distance to test for multiple possible insertions
 
 # Insert new leaves and check the tree structure
 insert_leaf_from_target(newick, target_leaf, new_leaf_base_name, new_length, dist)
