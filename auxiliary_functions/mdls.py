@@ -53,14 +53,14 @@ def get_subtree_newick_without_branch_lengths(node):
     return recursive_newick(node)
 
 # Example
-if __name__ == "__main__":
-    # Create a sample phylogenetic tree using ete3
-    newick = "(((L4:1.1058,L6:0.7225):0.6678,(L10:0.5582,(L1:0.8540,L5:0.6621):1.1539):1.1164):1.8280,(L3:0.6057,L8:1.0215):0.9939,(L7:1.1467,(2:1.0002,9:1.3349):1.5883):0.6401);"
-    tree = Tree(newick, format=1)
 
-    distinct_leaves = {"L1", "L3", "L4", "L5", "L7", "L8", "L10"}
+# Create a sample phylogenetic tree using ete3
+newick = "(((L4:1.1058,L6:0.7225):0.6678,(L10:0.5582,(L1:0.8540,L5:0.6621):1.1539):1.1164):1.8280,(L3:0.6057,L8:1.0215):0.9939,(L7:1.1467,(2:1.0002,9:1.3349):1.5883):0.6401);"
+tree = Tree(newick, format=1)
 
-    result = find_maximal_distinct_subtrees(tree, distinct_leaves)
-    for subtree_root in result:
-        subtree_newick = get_subtree_newick_without_branch_lengths(subtree_root)
-        print(subtree_newick)
+distinct_leaves = {"L1", "L3", "L4", "L5", "L7", "L8", "L10"}
+
+result = find_maximal_distinct_subtrees(tree, distinct_leaves)
+for subtree_root in result:
+    subtree_newick = get_subtree_newick_without_branch_lengths(subtree_root)
+    print(subtree_newick)
