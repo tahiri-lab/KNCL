@@ -300,6 +300,32 @@ def insert_leaf_from_target(newick, target_leaf, new_leaf_base_name, new_length,
             visited_nodes.add(new_leaf_name)
             print(f"Inserted '{new_leaf_name}' between '{previous_node.name}' and '{current_node.name}' with insert distance {insert_distance} and excess length {excess_length}")
 
+        return True
+
+    def insert_leaf_at_terminal(current_node, insert_distance):
+        print(f"Inserting at terminal node '{current_node.name}' with insert distance {insert_distance}")
+        excess_length = current_node.dist - insert_distance
+        if excess_length < 0:
+            excess_length = 0
+
+        # Create a new internal node between the leaf and its parent
+        parent = current_node.up
+        if parent:
+            # Detach the leaf node from its parent
+            current_node.detach()
+
+            # Create a new internal node and add it back to the parent
+            new_internal_node = parent.add_child(dist=excess_length)
+            new_internal_node.add_child(current_node, dist=insert_distance)
+            new_leaf_name = f"{target_leaf}_{new_leaf_base_name}{len(insertion_points) + 1}"
+            new_internal_node.add_child(name=new_leaf_name, dist=new_length)
+            insertion_points.append(new_internal_node)
+            visited_nodes.add(new_internal_node)
+            visited_nodes.add(new_leaf_name)
+            print(f"Inserted '{new_leaf_name}' at terminal node '{current_node.name}' with insert distance {insert_distance} and excess length {excess_length}")
+        else:
+            print("Unexpected case: trying to insert at terminal root leaf.")
+            return False
 
         return True
 
@@ -321,7 +347,7 @@ def insert_leaf_from_target(newick, target_leaf, new_leaf_base_name, new_length,
                     if not insert_leaf_at_node(current_node, insert_distance, prev_node, current_node.dist):
                         return
                 elif current_node.is_leaf():
-                    if not insert_leaf_at_node(current_node, insert_distance, prev_node, prev_node.dist):
+                    if not insert_leaf_at_terminal(current_node, insert_distance):
                         return
                 else:
                     print(f"Checking insertion between previous node '{prev_node.name if prev_node else 'None'}' and current node '{current_node.name}' with distances {prev_dist} - {insert_distance}")
@@ -338,11 +364,15 @@ def insert_leaf_from_target(newick, target_leaf, new_leaf_base_name, new_length,
 
     if dist <= target_node.dist:
         print(f"Direct insertion at target leaf '{target_leaf}' with distance {dist}")
-        insert_leaf_at_node(target_node, dist, target_node, target_node.dist)
+        insert_leaf_at_terminal(target_node, dist)
     else:
         bfs(target_node, 0)
 
-    tree
+    def round_tree_distances(tree_node, decimals=8):
+        for node in tree_node.traverse():
+            node.dist = round(node.dist, decimals)
+
+    round_tree_distances(tree)
 
     if insertion_points:
         print("Final tree with all inserted leaves:")
