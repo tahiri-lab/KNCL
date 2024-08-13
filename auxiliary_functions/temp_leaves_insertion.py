@@ -245,3 +245,117 @@ print(Tree(newick, format=1))
 # Insert new leaves and check the tree structure
 insert_leaf_from_target(newick, target_leaf, new_leaf_base_name, new_length, dist)
 print(Tree(newick, format=1))
+
+# Updated traversal case
+
+from ete3 import Tree
+
+def insert_leaf_from_target(newick, target_leaf, new_leaf_base_name, new_length, dist, tolerance=1e-10):
+    tree = Tree(newick, format=1)
+    target_node = tree.search_nodes(name=target_leaf)[0]
+    insertion_points = []
+    visited_nodes = set()
+
+    # Label internal nodes for easier tracking
+    internal_node_counter = 1
+    for node in tree.traverse("postorder"):
+        if not node.is_leaf() and not node.name:
+            node.name = f"Node{internal_node_counter}"
+            internal_node_counter += 1
+
+    def insert_leaf_at_node(current_node, insert_distance, previous_node, original_branch_distance):
+        print(f"Inserting between '{current_node.name}' and '{previous_node.name}' with distance {insert_distance}")
+        print(f"Original branch distance between '{current_node.name}' and '{previous_node.name}': {original_branch_distance}")
+
+        excess_length = original_branch_distance - insert_distance
+        print(f"Calculated excess length: {excess_length}")
+
+        if excess_length < 0:
+            excess_length = 0
+
+        parent = previous_node.up
+        if parent:
+            previous_node.detach()
+
+        if parent is None:
+            # Handle root case
+            new_internal_node = tree.add_child(dist=excess_length)
+            current_node.detach()
+            new_internal_node.add_child(current_node, dist=insert_distance)
+            new_leaf_name = f"{target_leaf}_{new_leaf_base_name}{len(insertion_points) + 1}"
+            new_internal_node.add_child(name=new_leaf_name, dist=new_length)
+            insertion_points.append(new_internal_node)
+            visited_nodes.add(new_internal_node)
+            visited_nodes.add(new_leaf_name)
+        else:
+            # Normal case with swapped distances
+            new_internal_node = parent.add_child(dist=insert_distance)
+            previous_node.dist = excess_length
+            current_node.dist = original_branch_distance - excess_length
+            new_internal_node.add_child(previous_node)
+            new_leaf_name = f"{target_leaf}_{new_leaf_base_name}{len(insertion_points) + 1}"
+            new_internal_node.add_child(name=new_leaf_name, dist=new_length)
+            insertion_points.append(new_internal_node)
+            visited_nodes.add(new_internal_node)
+            visited_nodes.add(new_leaf_name)
+            print(f"Inserted '{new_leaf_name}' between '{previous_node.name}' and '{current_node.name}' with insert distance {insert_distance} and excess length {excess_length}")
+
+
+        return True
+
+    def bfs(node, accumulated_distance):
+        queue = [(node, accumulated_distance, None, 0, [])]
+        while queue:
+            current_node, current_dist, prev_node, prev_dist, path = queue.pop(0)
+            if current_node in visited_nodes:
+                continue
+            visited_nodes.add(current_node)
+            current_path = path + [current_node.name]
+
+            print(f"Traversing '{current_node.name}' with accumulated distance: {current_dist}. Path: {' -> '.join(current_path)}")
+            if round(current_dist, 8) >= dist:
+                insert_distance = round(current_dist, 8) - round(dist, 8)
+                if abs(insert_distance) < tolerance:
+                    insert_distance = 0
+                if insert_distance == 0:
+                    if not insert_leaf_at_node(current_node, insert_distance, prev_node, current_node.dist):
+                        return
+                elif current_node.is_leaf():
+                    if not insert_leaf_at_node(current_node, insert_distance, prev_node, prev_node.dist):
+                        return
+                else:
+                    print(f"Checking insertion between previous node '{prev_node.name if prev_node else 'None'}' and current node '{current_node.name}' with distances {prev_dist} - {insert_distance}")
+                    if not insert_leaf_at_node(prev_node, prev_dist - insert_distance, current_node, prev_dist):
+                        return
+                continue
+
+            for child in current_node.children:
+                if child not in visited_nodes:
+                    queue.append((child, current_dist + child.dist, current_node, child.dist, current_path))
+
+            if current_node.up and current_node.up not in visited_nodes:
+                queue.append((current_node.up, current_dist + current_node.dist, current_node, current_node.dist, current_path))
+
+    if dist <= target_node.dist:
+        print(f"Direct insertion at target leaf '{target_leaf}' with distance {dist}")
+        insert_leaf_at_node(target_node, dist, target_node, target_node.dist)
+    else:
+        bfs(target_node, 0)
+
+    tree
+
+    if insertion_points:
+        print("Final tree with all inserted leaves:")
+        print(tree.write(format=1))
+        print(tree)
+    else:
+        print("No valid insertion points were found based on the specified distance.")
+
+# Example
+newick = "((A:0.597,B:0.139):0.735,((C:0.171,E:0.069):0.218,(Q:0.138,D:0.077):0.343):0.609);"
+target_leaf = "D"
+new_leaf_base_name = "temp"
+new_length = 0.279
+dist = 0.5530568807339449
+
+insert_leaf_from_target(newick, target_leaf, new_leaf_base_name, new_length, dist)
