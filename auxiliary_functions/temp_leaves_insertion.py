@@ -279,9 +279,9 @@ def insert_leaf_from_target(newick, target_leaf, new_leaf_base_name, new_length,
 
         if parent is None:
             # Handle root case
-            new_internal_node = tree.add_child(dist=excess_length)
+            new_internal_node = tree.add_child(dist=insert_distance)
             current_node.detach()
-            new_internal_node.add_child(current_node, dist=insert_distance)
+            new_internal_node.add_child(current_node, dist=excess_length)
             new_leaf_name = f"{target_leaf}_{new_leaf_base_name}{len(insertion_points) + 1}"
             new_internal_node.add_child(name=new_leaf_name, dist=new_length)
             insertion_points.append(new_internal_node)
@@ -315,8 +315,9 @@ def insert_leaf_from_target(newick, target_leaf, new_leaf_base_name, new_length,
             current_node.detach()
 
             # Create a new internal node and add it back to the parent
-            new_internal_node = parent.add_child(dist=excess_length)
-            new_internal_node.add_child(current_node, dist=insert_distance)
+            new_internal_node = parent.add_child(dist=insert_distance)
+            current_node.dist = excess_length
+            new_internal_node.add_child(current_node)
             new_leaf_name = f"{target_leaf}_{new_leaf_base_name}{len(insertion_points) + 1}"
             new_internal_node.add_child(name=new_leaf_name, dist=new_length)
             insertion_points.append(new_internal_node)
@@ -351,7 +352,7 @@ def insert_leaf_from_target(newick, target_leaf, new_leaf_base_name, new_length,
                         return
                 else:
                     print(f"Checking insertion between previous node '{prev_node.name if prev_node else 'None'}' and current node '{current_node.name}' with distances {prev_dist} - {insert_distance}")
-                    if not insert_leaf_at_node(prev_node, prev_dist - insert_distance, current_node, prev_dist):
+                    if not insert_leaf_at_node(current_node, insert_distance, prev_node, current_node.dist):
                         return
                 continue
 
@@ -381,7 +382,7 @@ def insert_leaf_from_target(newick, target_leaf, new_leaf_base_name, new_length,
     else:
         print("No valid insertion points were found based on the specified distance.")
 
-# Example
+# Test Example
 newick = "((A:0.597,B:0.139):0.735,((C:0.171,E:0.069):0.218,(Q:0.138,D:0.077):0.343):0.609);"
 target_leaf = "D"
 new_leaf_base_name = "temp"
