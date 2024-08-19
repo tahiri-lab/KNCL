@@ -247,7 +247,6 @@ insert_leaf_from_target(newick, target_leaf, new_leaf_base_name, new_length, dis
 print(Tree(newick, format=1))
 
 # Updated traversal case
-
 from ete3 import Tree
 
 def insert_leaf_from_target(newick, target_leaf, new_leaf_base_name, new_length, dist, tolerance=1e-10):
@@ -273,34 +272,35 @@ def insert_leaf_from_target(newick, target_leaf, new_leaf_base_name, new_length,
         if excess_length < 0:
             excess_length = 0
 
+        # Detach the previous node from its parent (the node leading to the root)
         parent = previous_node.up
         if parent:
             previous_node.detach()
 
         if parent is None:
-            # Handle root case
-            new_internal_node = tree.add_child(dist=insert_distance)
+            # Handle root case where there is no parent
+            new_internal_node = tree.add_child(dist=excess_length)
             current_node.detach()
-            new_internal_node.add_child(current_node, dist=excess_length)
+            new_internal_node.add_child(current_node, dist=insert_distance)
             new_leaf_name = f"{target_leaf}_{new_leaf_base_name}{len(insertion_points) + 1}"
             new_internal_node.add_child(name=new_leaf_name, dist=new_length)
             insertion_points.append(new_internal_node)
             visited_nodes.add(new_internal_node)
             visited_nodes.add(new_leaf_name)
         else:
-            # Normal case with swapped distances
+            # Normal case where the node has a parent
             new_internal_node = parent.add_child(dist=insert_distance)
-            previous_node.dist = excess_length
-            current_node.dist = original_branch_distance - excess_length
-            new_internal_node.add_child(previous_node)
-            new_leaf_name = f"{target_leaf}_{new_leaf_base_name}{len(insertion_points) + 1}"
-            new_internal_node.add_child(name=new_leaf_name, dist=new_length)
+            new_internal_node.add_child(previous_node, dist=excess_length)
+            new_internal_node.add_child(name=f"{target_leaf}_{new_leaf_base_name}{len(insertion_points) + 1}", dist=new_length)
             insertion_points.append(new_internal_node)
             visited_nodes.add(new_internal_node)
-            visited_nodes.add(new_leaf_name)
-            print(f"Inserted '{new_leaf_name}' between '{previous_node.name}' and '{current_node.name}' with insert distance {insert_distance} and excess length {excess_length}")
+            print(f"Inserted leaf '{target_leaf}_{new_leaf_base_name}{len(insertion_points)}' between '{previous_node.name}' and '{current_node.name}'")
 
-        return True
+        # Verify the insertion point is correct by recalculating the path distance
+        correct_insertion = verify_insertion_path(current_node, new_internal_node, previous_node, original_branch_distance)
+        if not correct_insertion:
+            print(f"Error: Insertion point verification failed between '{previous_node.name}' and '{current_node.name}'")
+        return correct_insertion
 
     def insert_leaf_at_terminal(current_node, insert_distance):
         print(f"Inserting at terminal node '{current_node.name}' with insert distance {insert_distance}")
@@ -315,9 +315,8 @@ def insert_leaf_from_target(newick, target_leaf, new_leaf_base_name, new_length,
             current_node.detach()
 
             # Create a new internal node and add it back to the parent
-            new_internal_node = parent.add_child(dist=insert_distance)
-            current_node.dist = excess_length
-            new_internal_node.add_child(current_node)
+            new_internal_node = parent.add_child(dist=excess_length)
+            new_internal_node.add_child(current_node, dist=insert_distance)
             new_leaf_name = f"{target_leaf}_{new_leaf_base_name}{len(insertion_points) + 1}"
             new_internal_node.add_child(name=new_leaf_name, dist=new_length)
             insertion_points.append(new_internal_node)
@@ -352,7 +351,7 @@ def insert_leaf_from_target(newick, target_leaf, new_leaf_base_name, new_length,
                         return
                 else:
                     print(f"Checking insertion between previous node '{prev_node.name if prev_node else 'None'}' and current node '{current_node.name}' with distances {prev_dist} - {insert_distance}")
-                    if not insert_leaf_at_node(current_node, insert_distance, prev_node, current_node.dist):
+                    if not insert_leaf_at_node(prev_node, prev_dist - insert_distance, current_node, prev_dist):
                         return
                 continue
 
@@ -362,6 +361,12 @@ def insert_leaf_from_target(newick, target_leaf, new_leaf_base_name, new_length,
 
             if current_node.up and current_node.up not in visited_nodes:
                 queue.append((current_node.up, current_dist + current_node.dist, current_node, current_node.dist, current_path))
+
+    def verify_insertion_path(current_node, new_internal_node, previous_node, original_branch_distance):
+        # Verifies if the insertion happened between the correct nodes
+        distance_check = current_node.get_distance(new_internal_node) + new_internal_node.get_distance(previous_node)
+        print(f"Verifying insertion path distance: {distance_check}, between '{previous_node.name}' and '{current_node.name}'")
+        return abs(distance_check - original_branch_distance) < tolerance
 
     if dist <= target_node.dist:
         print(f"Direct insertion at target leaf '{target_leaf}' with distance {dist}")
@@ -382,11 +387,11 @@ def insert_leaf_from_target(newick, target_leaf, new_leaf_base_name, new_length,
     else:
         print("No valid insertion points were found based on the specified distance.")
 
-# Test Example
-newick = "((A:0.597,B:0.139):0.735,((C:0.171,E:0.069):0.218,(Q:0.138,D:0.077):0.343):0.609);"
+# Example
+newick = "(((A:1.587,(F:1.110,(M:1.343,R:1.369):0.846):0.487):1.981,D:0.356):2.121,(B:1.936,(C:0.915,Q:1.201):2.101):0.912);"
 target_leaf = "D"
 new_leaf_base_name = "temp"
 new_length = 0.279
-dist = 0.5530568807339449
+dist = 2.6959360816944034
 
 insert_leaf_from_target(newick, target_leaf, new_leaf_base_name, new_length, dist)
