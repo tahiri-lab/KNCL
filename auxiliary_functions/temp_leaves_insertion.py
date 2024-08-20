@@ -299,8 +299,10 @@ def insert_leaf_from_target(newick, target_leaf, new_leaf_base_name, new_length,
             visited_nodes.add(new_leaf_name)
         else:
             print(f"Normal case: Adding new internal node between '{previous_node.name}' and its parent.")
-            new_internal_node = parent.add_child(dist=insert_distance)
-            new_internal_node.add_child(previous_node, dist=excess_length)
+            #new_internal_node = parent.add_child(dist=insert_distance)
+            #new_internal_node.add_child(previous_node, dist=excess_length)
+            new_internal_node = parent.add_child(dist=excess_length)
+            new_internal_node.add_child(previous_node, dist=insert_distance)
             new_leaf_name = f"{target_leaf}_{new_leaf_base_name}{len(insertion_points) + 1}"
             new_internal_node.add_child(name=new_leaf_name, dist=new_length)
             insertion_points.append(new_internal_node)
