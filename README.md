@@ -57,3 +57,6 @@ The `output.txt` file will contain:
 The description of the k-Nearest Common Leaves algorithm can be found [here](https://github.com/tahiri-lab/KNCL/blob/main/algorithm.md).
 
 Debugging of the updated version of the *k*-NCL algorithm is in progress.
+
+# 📧 Contact
+Please email us at: <Nadia.Tahiri@USherbrooke.ca> for any questions or feedback.
