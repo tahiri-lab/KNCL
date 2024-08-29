@@ -14,6 +14,7 @@ def precompute_descendants(node, distinct_leaves):
                 break
         node.add_feature("descendants_distinct", all_distinct)
 
+# Function to find maximal distinct-leaf subtrees using precomputed descendants 
 def findSD(tree, distinct_leaves):
     for node in tree.traverse("postorder"):
         precompute_descendants(node, distinct_leaves)
@@ -52,6 +53,7 @@ def get_subtree_newick_with_branch_lengths(node):
 
     return recursive_newick(node)
 
+# Function to insert temporary leaves based on predefined distances
 def InsertTempLeaves(newick, target_leaf, new_leaf_base_name, new_length, dist, tolerance=1e-10):
     tree = Tree(newick, format=1)
     target_node = tree.search_nodes(name=target_leaf)[0]
@@ -186,6 +188,7 @@ def InsertTempLeaves(newick, target_leaf, new_leaf_base_name, new_length, dist, 
 
     return tree
 
+# Function to find the farthest leaves among a set of temporary leaves
 def find_farthest_leaf(tree, start, temporary_leaves):
     max_distance = 0
     farthest_leaf = start
@@ -233,6 +236,7 @@ def find_path(leaf1, leaf2):
     path_names = [n.name for n in path]
     return path, branch_lengths
 
+#Function to compute the midpoint node for temporary leaves
 def compute_midpoint(tree, temporary_leaves):
     start = next(iter(temporary_leaves))
     leaf1, dist1 = find_farthest_leaf(tree, start, temporary_leaves)
@@ -254,6 +258,7 @@ def compute_midpoint(tree, temporary_leaves):
             prev_node = path[i - 1]
             return prev_node, node, 0, half_distance, branch_lengths[i - 1]
 
+# Function to insert a new leave of a MDS at the midpoint
 def insert_midpoint_and_new_leaf(tree, prev_node, curr_node, excess, new_leaf_name, branch_length, original_dist):
     if excess == 0:
         new_leaf = Tree(name=new_leaf_name)
@@ -292,12 +297,14 @@ def insert_midpoint_and_new_leaf(tree, prev_node, curr_node, excess, new_leaf_na
 
     return tree
 
+# Remove temporary leaves after leaf insertion
 def remove_temporary_leaves(tree, temporary_leaves):
     for leaf in temporary_leaves:
         if leaf.up:
             parent = leaf.up
             parent.remove_child(leaf)
 
+# Main function to implement k-NCL insertion logic
 def kNCL(T1, T2, k):
     CL = set(T1.get_leaf_names()) & set(T2.get_leaf_names())
     print(f"Common Leaves (CL): {CL}")
