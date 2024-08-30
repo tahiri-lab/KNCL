@@ -3,7 +3,7 @@
 
 from ete3 import Tree
 
-def insert_leaf_from_target(newick, target_leaf, new_leaf_base_name, new_length, dist, tolerance=1e-10):
+def InsertTempLeaves(newick, target_leaf, new_leaf_base_name, new_length, dist, tolerance=1e-10):
     tree = Tree(newick, format=1)
     target_node = tree.search_nodes(name=target_leaf)[0]
     insertion_points = []
@@ -130,7 +130,7 @@ new_leaf_base_name = "temp"
 new_length = 0.279
 dist = 3.0597060866386405
 
-insert_leaf_from_target(newick, target_leaf, new_leaf_base_name, new_length, dist)
+InsertTempLeaves(newick, target_leaf, new_leaf_base_name, new_length, dist)
 # Debugging
 
 from ete3 import Tree
