@@ -14,7 +14,6 @@ def precompute_descendants(node, distinct_leaves):
                 break
         node.add_feature("descendants_distinct", all_distinct)
 
-# Function to find maximal distinct-leaf subtrees using precomputed descendants 
 def findSD(tree, distinct_leaves):
     for node in tree.traverse("postorder"):
         precompute_descendants(node, distinct_leaves)
@@ -53,142 +52,128 @@ def get_subtree_newick_with_branch_lengths(node):
 
     return recursive_newick(node)
 
-# Function to insert temporary leaves based on predefined distances
 def InsertTempLeaves(newick, target_leaf, new_leaf_base_name, new_length, dist, tolerance=1e-10):
     tree = Tree(newick, format=1)
     target_node = tree.search_nodes(name=target_leaf)[0]
-    insertion_points = []  # Store nodes where inserts will be made
-    visited_nodes = set()  # Set to track visited nodes
+    insertion_points = []
+    visited_nodes = set()
 
-    # Label internal nodes for easier tracking
+    # Label internal nodes and branches for easier tracking
     internal_node_counter = 1
     for node in tree.traverse("postorder"):
         if not node.is_leaf() and not node.name:
             node.name = f"Node{internal_node_counter}"
             internal_node_counter += 1
 
-    def insert_leaf_at_node(parent_node, insert_distance, previous_node):
-        if abs(insert_distance) < tolerance:
-            #new_leaf_name = f"{new_leaf_base_name}{len(insertion_points) + 1}"
+    def robust_insert_leaf_at_node(current_node, insert_distance, previous_node, original_branch_distance, toward_root=False):
+        excess_length = original_branch_distance - insert_distance
+
+        if excess_length < 0:
+            excess_length = 0
+
+        # Handle traversal toward the root by ensuring correct branch selection
+        if toward_root:
+            temp = current_node
+            current_node = previous_node
+            previous_node = temp
+
+        # Detach the previous node from its parent (the node leading to the root)
+        parent = previous_node.up
+        if parent:
+            previous_node.detach()
+
+        if parent is None:
+            new_internal_node = tree.add_child(dist=excess_length)
+            current_node.detach()
+            new_internal_node.add_child(current_node, dist=insert_distance)
             new_leaf_name = f"{target_leaf}_{new_leaf_base_name}{len(insertion_points) + 1}"
-            parent_node.add_child(name=new_leaf_name, dist=new_length)
-            insertion_points.append(parent_node)
-            visited_nodes.add(parent_node)
+            new_internal_node.add_child(name=new_leaf_name, dist=new_length)
+            insertion_points.append(new_leaf_name)
+            visited_nodes.add(new_internal_node)
             visited_nodes.add(new_leaf_name)
         else:
-            excess_length = parent_node.dist - insert_distance
-            if excess_length < 0:
-                return False
+            new_internal_node = parent.add_child(dist=excess_length)
+            new_internal_node.add_child(previous_node, dist=insert_distance)
+            new_leaf_name = f"{target_leaf}_{new_leaf_base_name}{len(insertion_points) + 1}"
+            new_internal_node.add_child(name=new_leaf_name, dist=new_length)
+            insertion_points.append(new_leaf_name)
+            visited_nodes.add(new_internal_node)
 
-            if parent_node.up:
-                new_internal_node = parent_node.up.add_child(dist=excess_length)
-                parent_node.detach()
-                new_internal_node.add_child(parent_node, dist=insert_distance)
-                #new_leaf_name = f"{new_leaf_base_name}{len(insertion_points) + 1}"
-                new_leaf_name = f"{target_leaf}_{new_leaf_base_name}{len(insertion_points) + 1}"
-                new_internal_node.add_child(name=new_leaf_name, dist=new_length)
-                insertion_points.append(new_internal_node)
-                visited_nodes.add(new_internal_node)
-                visited_nodes.add(new_internal_node.children[1])  # Newly added leaf node
-            else:
-                # Handling the case when the parent node is the root
-                new_internal_node = tree.add_child(dist=excess_length)
-                parent_node.detach()
-                new_internal_node.add_child(parent_node, dist=insert_distance)
-                #new_leaf_name = f"{new_leaf_base_name}{len(insertion_points) + 1}"
-                new_leaf_name = f"{target_leaf}_{new_leaf_base_name}{len(insertion_points) + 1}"
-                new_internal_node.add_child(name=new_leaf_name, dist=new_length)
-                insertion_points.append(new_internal_node)
-                visited_nodes.add(new_internal_node)
-                visited_nodes.add(new_internal_node.children[1])  # Newly added leaf node
-            return True
+        # Post-insertion validation
+        correct_insertion = validate_insertion_path(current_node, new_internal_node, previous_node, original_branch_distance)
+        if not correct_insertion:
+            print(f"Error: Insertion point verification failed between '{previous_node.name}' and '{current_node.name}'")
+        return correct_insertion
 
-    def bfs_case_1(node, accumulated_distance):
-        queue = [(node, accumulated_distance, None, 0, [])]
-        while queue:
-            current_node, current_dist, prev_node, prev_dist, path = queue.pop(0)
-            if current_node in visited_nodes:
-                continue
-            visited_nodes.add(current_node)
-            current_path = path + [current_node.name]
+    def insert_leaf_at_terminal(current_node, insert_distance):
+        excess_length = current_node.dist - insert_distance
+        if excess_length < 0:
+            excess_length = 0
 
-            if round(current_dist, 8) >= dist:
-                insert_distance = round(current_dist, 8) - round(dist, 8)
-                if abs(insert_distance) < tolerance:
-                    insert_distance = 0
-                if insert_distance == 0:
-                    # Insert leaf directly at the current node
-                    if not insert_leaf_at_node(current_node, insert_distance, prev_node):
-                        return
-                elif current_node.is_leaf():
-                    # Insert new leaf at the correct branch between the node and its parent
-                    if not insert_leaf_at_node(current_node, insert_distance, prev_node):
-                        return
-                else:
-                    # Insert new leaf at the correct branch between the previous node and the current node
-                    if not insert_leaf_at_node(current_node, insert_distance, prev_node):
-                        return
-                continue
-
-            # Traverse children
-            for child in current_node.children:
-                if child not in visited_nodes:  # Avoid traversing newly added leaves
-                    queue.append((child, current_dist + child.dist, current_node, child.dist, current_path))
-
-            # Traverse parent
-            if current_node.up and current_node.up not in visited_nodes:  # Avoid traversing newly added internal nodes
-                queue.append((current_node.up, current_dist + current_node.dist, current_node, current_node.dist, current_path))
-
-    def bfs_case_2(node, accumulated_distance):
-        # BFS traversal with a focus on trees where the leaf is on a different side of the root
-        queue = [(node, accumulated_distance, None, 0, [])]
-        while queue:
-            current_node, current_dist, prev_node, prev_dist, path = queue.pop(0)
-            if current_node in visited_nodes:
-                continue
-            visited_nodes.add(current_node)
-            current_path = path + [current_node.name]
-
-            if round(current_dist, 8) >= dist:
-                insert_distance = round(current_dist, 8) - round(dist, 8)
-                if abs(insert_distance) < tolerance:
-                    insert_distance = 0
-                if insert_distance == 0:
-                    # Insert leaf directly at the current node
-                    if not insert_leaf_at_node(current_node, insert_distance, prev_node):
-                        return
-                elif current_node.is_leaf():
-                    # Insert new leaf at the correct branch between the node and its parent
-                    if not insert_leaf_at_node(current_node, insert_distance, prev_node):
-                        return
-                else:
-                    # Insert new leaf at the correct branch between the previous node and the current node
-                    if not insert_leaf_at_node(prev_node, prev_dist - insert_distance, current_node):
-                        return
-                continue
-
-            # Traverse children
-            for child in current_node.children:
-                if child not in visited_nodes:  # Avoid traversing newly added leaves
-                    queue.append((child, current_dist + child.dist, current_node, child.dist, current_path))
-
-            # Traverse parent
-            if current_node.up and current_node.up not in visited_nodes:  # Avoid traversing newly added internal nodes
-                queue.append((current_node.up, current_dist + current_node.dist, current_node, current_node.dist, current_path))
-
-    # Direct insertion case when dist is less than the terminal branch length of the target leaf
-    if dist <= target_node.dist:
-        insert_leaf_at_node(target_node, dist, target_node)
-    else:
-        # Determine which BFS method to use based on tree topology
-        if tree.get_distance(tree.get_tree_root(), target_node) < tree.get_farthest_leaf()[1] / 2:
-            bfs_case_1(target_node, 0)
+        parent = current_node.up
+        if parent:
+            current_node.detach()
+            new_internal_node = parent.add_child(dist=excess_length)
+            new_internal_node.add_child(current_node, dist=insert_distance)
+            new_leaf_name = f"{target_leaf}_{new_leaf_base_name}{len(insertion_points) + 1}"
+            new_internal_node.add_child(name=new_leaf_name, dist=new_length)
+            insertion_points.append(new_leaf_name)
+            visited_nodes.add(new_internal_node)
+            visited_nodes.add(new_leaf_name)
         else:
-            bfs_case_2(target_node, 0)
+            return False
 
-    return tree
+        return True
 
-# Function to find the farthest leaves among a set of temporary leaves
+    def bfs(node, accumulated_distance):
+        queue = [(node, accumulated_distance, None, 0, [], False)]
+        while queue:
+            current_node, current_dist, prev_node, prev_dist, path, toward_root = queue.pop(0)
+            if current_node in visited_nodes:
+                continue
+            visited_nodes.add(current_node)
+            current_path = path + [current_node.name]
+
+            if round(current_dist, 8) >= dist:
+                insert_distance = round(current_dist, 8) - round(dist, 8)
+                if abs(insert_distance) < tolerance:
+                    insert_distance = 0
+                if insert_distance == 0:
+                    if not robust_insert_leaf_at_node(current_node, insert_distance, prev_node, current_node.dist, toward_root):
+                        return
+                elif current_node.is_leaf():
+                    if not insert_leaf_at_terminal(current_node, insert_distance):
+                        return
+                else:
+                    if not robust_insert_leaf_at_node(prev_node, prev_dist - insert_distance, current_node, prev_dist, toward_root):
+                        return
+                continue
+
+            for child in current_node.children:
+                if child not in visited_nodes:
+                    queue.append((child, current_dist + child.dist, current_node, child.dist, current_path, False))
+
+            if current_node.up and current_node.up not in visited_nodes:
+                queue.append((current_node.up, current_dist + current_node.dist, current_node, current_node.dist, current_path, True))
+
+    def validate_insertion_path(current_node, new_internal_node, previous_node, original_branch_distance):
+        # Verifies if the insertion happened between the correct nodes
+        distance_check = current_node.get_distance(new_internal_node) + new_internal_node.get_distance(previous_node)
+        return abs(distance_check - original_branch_distance) < tolerance
+
+    if dist <= target_node.dist:
+        insert_leaf_at_terminal(target_node, dist)
+    else:
+        bfs(target_node, 0)
+
+    if insertion_points:
+        print(tree.write(format=1))
+        print(tree)
+    else:
+        print("No valid insertion points were found based on the specified distance.")
+
+    return tree, insertion_points
+
 def find_farthest_leaf(tree, start, temporary_leaves):
     max_distance = 0
     farthest_leaf = start
@@ -213,6 +198,7 @@ def find_path(leaf1, leaf2):
         path2.append(node)
         node = node.up
 
+    # Find the common ancestor
     lca = None
     for n1 in path1:
         if n1 in path2:
@@ -236,7 +222,6 @@ def find_path(leaf1, leaf2):
     path_names = [n.name for n in path]
     return path, branch_lengths
 
-#Function to compute the midpoint node for temporary leaves
 def compute_midpoint(tree, temporary_leaves):
     start = next(iter(temporary_leaves))
     leaf1, dist1 = find_farthest_leaf(tree, start, temporary_leaves)
@@ -258,7 +243,6 @@ def compute_midpoint(tree, temporary_leaves):
             prev_node = path[i - 1]
             return prev_node, node, 0, half_distance, branch_lengths[i - 1]
 
-# Function to insert a new leave of a MDS at the midpoint
 def insert_midpoint_and_new_leaf(tree, prev_node, curr_node, excess, new_leaf_name, branch_length, original_dist):
     if excess == 0:
         new_leaf = Tree(name=new_leaf_name)
@@ -266,6 +250,7 @@ def insert_midpoint_and_new_leaf(tree, prev_node, curr_node, excess, new_leaf_na
         curr_node.add_child(new_leaf)
         return tree
 
+    # Calculate distances
     if curr_node in prev_node.get_ancestors():
         distance_to_midpoint = round(excess, 8)
         distance_from_midpoint_to_leaf = round(original_dist - excess, 8)
@@ -276,6 +261,7 @@ def insert_midpoint_and_new_leaf(tree, prev_node, curr_node, excess, new_leaf_na
     if distance_to_midpoint < 0 or distance_from_midpoint_to_leaf < 0:
         raise ValueError("Negative distance encountered. Check the calculation logic.")
 
+    # Insert new midpoint node
     new_node = Tree(name="midpoint")
     new_node.dist = distance_to_midpoint
 
@@ -287,7 +273,9 @@ def insert_midpoint_and_new_leaf(tree, prev_node, curr_node, excess, new_leaf_na
         child = curr_node
 
     parent.remove_child(child)
+
     parent.add_child(new_node)
+
     new_node.add_child(child)
     child.dist = distance_from_midpoint_to_leaf
 
@@ -297,18 +285,21 @@ def insert_midpoint_and_new_leaf(tree, prev_node, curr_node, excess, new_leaf_na
 
     return tree
 
-# Remove temporary leaves after leaf insertion
 def remove_temporary_leaves(tree, temporary_leaves):
     for leaf in temporary_leaves:
         if leaf.up:
             parent = leaf.up
             parent.remove_child(leaf)
 
-# Main function to implement k-NCL insertion logic
 def kNCL(T1, T2, k):
     CL = set(T1.get_leaf_names()) & set(T2.get_leaf_names())
+    if len(CL) < 2:
+        raise ValueError("The input trees must have at least two common leaves.")
+    if k < 2 or k > len(CL):
+        raise ValueError("The value of k must be between 2 and the number of common leaves.")
+    
     print(f"Common Leaves (CL): {CL}")
-
+    
     def adjust_rate(T1, T2):
         sum_T1 = sum(T1.get_distance(l1, l2) for i, l1 in enumerate(CL) for l2 in list(CL)[i + 1:])
         sum_T2 = sum(T2.get_distance(l1, l2) for i, l1 in enumerate(CL) for l2 in list(CL)[i + 1:])
@@ -346,15 +337,35 @@ def kNCL(T1, T2, k):
                 rc = sum(T2.get_distance(lc_node, l) for l in CL) / sum(T1.get_distance(lc_node_T1, l) for l in CL)
                 dp = (T1.get_distance(a, lc_node_T1) - a.dist) * rc
                 print(f"Inserting temporary leaves for {a.name} from leaf {lc} at distance {dp}")
-                T2 = InsertTempLeaves(T2.write(format=1), lc, "temp", br_a, dp)
-            print(f"Temporary leaves for {a.name}: {[leaf.name for leaf in T2.get_leaves() if 'temp' in leaf.name]}")
+                tree_newick = T2.write(format=1)
+                updated_tree, temp_leaves = InsertTempLeaves(tree_newick, lc, "temp", br_a, dp)
+                TL.update(updated_tree & name for name in temp_leaves)  # Convert names to node objects
+                T2 = Tree(updated_tree.write(format=1), format=1)
+            
+            print(f"Temporary leaves for {a.name}: {[leaf.name for leaf in TL]}")
             print("Tree after inserting temporary leaves:")
             print(T2.write(format=1))
-            temporary_leaves = [T2 & leaf_name for leaf_name in T2.get_leaf_names() if 'temp' in leaf_name]
-            prev_node, curr_node, excess, _, original_dist = compute_midpoint(T2, temporary_leaves)
-            print(f"Inserting midpoint and new leaf for {a.name} between {prev_node.name} and {curr_node.name}")
-            T2 = insert_midpoint_and_new_leaf(T2, prev_node, curr_node, excess, a.name, br_a, original_dist)
-            remove_temporary_leaves(T2, temporary_leaves)
+
+            if not TL:
+                print(f"No temporary leaves were inserted for {a.name}")
+                continue
+            
+            if len(TL) == 1:
+                single_leaf = next(iter(TL))
+                single_leaf.name = a.name  # Rename the single temporary leaf to the new element's name
+                print(f"Only one temporary leaf, renamed {single_leaf.name} as the new element")
+            else:
+                try:
+                    prev_node, curr_node, excess, _, original_dist = compute_midpoint(T2, TL)
+                    print(f"Inserting midpoint and new leaf for {a.name} between {prev_node.name} and {curr_node.name}")
+                    print(f"Midpoint insertion details - Excess: {excess}, Original Dist: {original_dist}")
+                    T2 = insert_midpoint_and_new_leaf(T2, prev_node, curr_node, excess, a.name, br_a, original_dist)
+                except Exception as e:
+                    print("Error encountered during midpoint insertion:")
+                    print(f"Nodes involved: {[leaf.name for leaf in TL]}")
+                    print(f"Error: {str(e)}")
+            
+            remove_temporary_leaves(T2, TL)
             print(f"Inserted midpoint and new leaf for {a.name}")
             print(f"Tree after removing temporary leaves:")
             print(T2.write(format=1))
@@ -363,7 +374,7 @@ def kNCL(T1, T2, k):
     T1_completed = process_tree(T1, T2, SD1, r12, k)
     print("Intermediate T1 completed tree state:")
     print(T1_completed.write(format=1))
-
+    
     T2_completed = process_tree(T2, T1, SD2, r21, k)
     print("Intermediate T2 completed tree state:")
     print(T2_completed.write(format=1))
