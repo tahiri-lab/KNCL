@@ -88,7 +88,7 @@ def InsertTempLeaves(newick, target_leaf, new_leaf_base_name, new_length, dist, 
             new_internal_node.add_child(current_node, dist=insert_distance)
             new_leaf_name = f"{target_leaf}_{new_leaf_base_name}{len(insertion_points) + 1}"
             new_internal_node.add_child(name=new_leaf_name, dist=new_length)
-            insertion_points.append(new_leaf_name)
+            insertion_points.append(tree & new_leaf_name)
             visited_nodes.add(new_internal_node)
             visited_nodes.add(new_leaf_name)
         else:
@@ -96,7 +96,7 @@ def InsertTempLeaves(newick, target_leaf, new_leaf_base_name, new_length, dist, 
             new_internal_node.add_child(previous_node, dist=insert_distance)
             new_leaf_name = f"{target_leaf}_{new_leaf_base_name}{len(insertion_points) + 1}"
             new_internal_node.add_child(name=new_leaf_name, dist=new_length)
-            insertion_points.append(new_leaf_name)
+            insertion_points.append(tree & new_leaf_name)
             visited_nodes.add(new_internal_node)
 
         # Post-insertion validation
@@ -117,7 +117,7 @@ def InsertTempLeaves(newick, target_leaf, new_leaf_base_name, new_length, dist, 
             new_internal_node.add_child(current_node, dist=insert_distance)
             new_leaf_name = f"{target_leaf}_{new_leaf_base_name}{len(insertion_points) + 1}"
             new_internal_node.add_child(name=new_leaf_name, dist=new_length)
-            insertion_points.append(new_leaf_name)
+            insertion_points.append(tree & new_leaf_name)
             visited_nodes.add(new_internal_node)
             visited_nodes.add(new_leaf_name)
         else:
@@ -129,7 +129,7 @@ def InsertTempLeaves(newick, target_leaf, new_leaf_base_name, new_length, dist, 
         queue = [(node, accumulated_distance, None, 0, [], False)]
         while queue:
             current_node, current_dist, prev_node, prev_dist, path, toward_root = queue.pop(0)
-            if current_node in visited_nodes:
+            if current_node in visited_nodes or 'temp' in current_node.name:
                 continue
             visited_nodes.add(current_node)
             current_path = path + [current_node.name]
@@ -167,6 +167,7 @@ def InsertTempLeaves(newick, target_leaf, new_leaf_base_name, new_length, dist, 
         bfs(target_node, 0)
 
     if insertion_points:
+        print(f"Tree after inserting temporary leaves for target_leaf {target_leaf}:")
         print(tree.write(format=1))
         print(tree)
     else:
@@ -198,7 +199,6 @@ def find_path(leaf1, leaf2):
         path2.append(node)
         node = node.up
 
-    # Find the common ancestor
     lca = None
     for n1 in path1:
         if n1 in path2:
@@ -250,7 +250,6 @@ def insert_midpoint_and_new_leaf(tree, prev_node, curr_node, excess, new_leaf_na
         curr_node.add_child(new_leaf)
         return tree
 
-    # Calculate distances
     if curr_node in prev_node.get_ancestors():
         distance_to_midpoint = round(excess, 8)
         distance_from_midpoint_to_leaf = round(original_dist - excess, 8)
@@ -261,7 +260,6 @@ def insert_midpoint_and_new_leaf(tree, prev_node, curr_node, excess, new_leaf_na
     if distance_to_midpoint < 0 or distance_from_midpoint_to_leaf < 0:
         raise ValueError("Negative distance encountered. Check the calculation logic.")
 
-    # Insert new midpoint node
     new_node = Tree(name="midpoint")
     new_node.dist = distance_to_midpoint
 
@@ -273,9 +271,7 @@ def insert_midpoint_and_new_leaf(tree, prev_node, curr_node, excess, new_leaf_na
         child = curr_node
 
     parent.remove_child(child)
-
     parent.add_child(new_node)
-
     new_node.add_child(child)
     child.dist = distance_from_midpoint_to_leaf
 
@@ -339,8 +335,21 @@ def kNCL(T1, T2, k):
                 print(f"Inserting temporary leaves for {a.name} from leaf {lc} at distance {dp}")
                 tree_newick = T2.write(format=1)
                 updated_tree, temp_leaves = InsertTempLeaves(tree_newick, lc, "temp", br_a, dp)
-                TL.update(updated_tree & name for name in temp_leaves)  # Convert names to node objects
+
+                # Added Debugging Information
+                print(f"Temporary leaves after insertion for {lc}: {temp_leaves}")
+                print(f"Tree structure before updating TL: {updated_tree.write(format=1)}")
+                print(f"Temporary leaf names to be updated in TL: {temp_leaves}")
+                
+                try:
+                    TL.update(updated_tree & name for name in temp_leaves)  # Convert names to node objects
+                except TreeError as e:
+                    print(f"TreeError encountered: {str(e)}")
+                    print(f"Failed to find node with name in: {temp_leaves}")
+                    raise
+
                 T2 = Tree(updated_tree.write(format=1), format=1)
+                print(f"Tree after updating TL: {T2.write(format=1)}")
             
             print(f"Temporary leaves for {a.name}: {[leaf.name for leaf in TL]}")
             print("Tree after inserting temporary leaves:")
@@ -396,3 +405,4 @@ print("Completed T1:")
 print(T1_completed.write(format=1))
 print("Completed T2:")
 print(T2_completed.write(format=1))
+
