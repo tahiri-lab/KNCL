@@ -293,9 +293,9 @@ def kNCL(T1, T2, k):
         raise ValueError("The input trees must have at least two common leaves.")
     if k < 2 or k > len(CL):
         raise ValueError("The value of k must be between 2 and the number of common leaves.")
-    
+
     print(f"Common Leaves (CL): {CL}")
-    
+
     def adjust_rate(T1, T2):
         sum_T1 = sum(T1.get_distance(l1, l2) for i, l1 in enumerate(CL) for l2 in list(CL)[i + 1:])
         sum_T2 = sum(T2.get_distance(l1, l2) for i, l1 in enumerate(CL) for l2 in list(CL)[i + 1:])
@@ -340,17 +340,17 @@ def kNCL(T1, T2, k):
                 print(f"Temporary leaves after insertion for {lc}: {temp_leaves}")
                 print(f"Tree structure before updating TL: {updated_tree.write(format=1)}")
                 print(f"Temporary leaf names to be updated in TL: {temp_leaves}")
-                
+
                 try:
-                    TL.update(updated_tree & name for name in temp_leaves)  # Convert names to node objects
+                    TL.update(updated_tree & name for name in [leaf.name for leaf in temp_leaves])  # Convert names to node objects
                 except TreeError as e:
                     print(f"TreeError encountered: {str(e)}")
-                    print(f"Failed to find node with name in: {temp_leaves}")
+                    print(f"Failed to find node with name in: {[leaf.name for leaf in temp_leaves]}")
                     raise
 
                 T2 = Tree(updated_tree.write(format=1), format=1)
                 print(f"Tree after updating TL: {T2.write(format=1)}")
-            
+
             print(f"Temporary leaves for {a.name}: {[leaf.name for leaf in TL]}")
             print("Tree after inserting temporary leaves:")
             print(T2.write(format=1))
@@ -358,7 +358,7 @@ def kNCL(T1, T2, k):
             if not TL:
                 print(f"No temporary leaves were inserted for {a.name}")
                 continue
-            
+
             if len(TL) == 1:
                 single_leaf = next(iter(TL))
                 single_leaf.name = a.name  # Rename the single temporary leaf to the new element's name
@@ -373,7 +373,7 @@ def kNCL(T1, T2, k):
                     print("Error encountered during midpoint insertion:")
                     print(f"Nodes involved: {[leaf.name for leaf in TL]}")
                     print(f"Error: {str(e)}")
-            
+
             remove_temporary_leaves(T2, TL)
             print(f"Inserted midpoint and new leaf for {a.name}")
             print(f"Tree after removing temporary leaves:")
@@ -383,7 +383,7 @@ def kNCL(T1, T2, k):
     T1_completed = process_tree(T1, T2, SD1, r12, k)
     print("Intermediate T1 completed tree state:")
     print(T1_completed.write(format=1))
-    
+
     T2_completed = process_tree(T2, T1, SD2, r21, k)
     print("Intermediate T2 completed tree state:")
     print(T2_completed.write(format=1))
@@ -405,4 +405,3 @@ print("Completed T1:")
 print(T1_completed.write(format=1))
 print("Completed T2:")
 print(T2_completed.write(format=1))
-
