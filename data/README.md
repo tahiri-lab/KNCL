@@ -21,7 +21,7 @@ The simulated data consists of the following two files:
 
 The methodology for obtaining biological data of phylogenetic trees with different but overlapping taxa is as follows.
 1. The biological data utilized in this study was obtained from [vertlife.org](https://vertlife.org/phylosubsets/), which offers a straightforward method for acquiring tree distributions with specified subsets of taxa. The tool initially prunes a comprehensive dataset to a smaller subset and then samples trees from the selected pseudoposterior distribution.
-2. The following four groups, representing four distinct datasets, have been selected for analysis: **amphibians**, **birds**, **mammals**, and **sharks**.
+2. The following four groups, representing four distinct datasets, have been selected for analysis: **amphibians** :frog:, **birds** :eagle:, **mammals** :monkey:, and **sharks** :shark:.
 3. The number of species included in each group varies. In particular, there are 7239 species of amphibians, 9993 species of birds, 5911 species of mammals, and 1192 species of sharks (see [all_species_lists.xlsx](https://github.com/tahiri-lab/KNCL/blob/main/data/all_species_lists.xlsx)).
 
 To be continued...
