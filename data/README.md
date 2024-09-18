@@ -26,4 +26,13 @@ The methodology for obtaining biological data of phylogenetic trees with differe
 4. Each species group comprises subgroups representing species families. For example, species such as Acris blanchardi, Acris crepitans, and Acris gryllus are assumed to represent the Acris subgroup, which is identified by the first word in the species names. In each subgroup, a single species is randomly selected.
 5. The resulting aggregated dataset for each species subgroup is subsequently employed in the creation of a dataset of overlapping trees. The final dataset for each group consists of a number of subsets that overlap from 10% to 90%.
 
+The biological data consists of the following four files:
+
+1. [**`amphibians_trees.txt`**](https://github.com/tahiri-lab/KNCL/blob/main/data/amphibians_trees.txt):
+   - Contains 700 phylogenetic trees (Newick) of *Amphibians* with overlap levels ranging from 10% to 100%.
+   - Total number of unique species: 137.
+   - Average level of overlap: 59.52%.
+   - Number of unique pairs of trees: 244650.
+   - Number of unique pairs of trees with 100% overlap: 24150 or 9.87%
+
 To be continued...
