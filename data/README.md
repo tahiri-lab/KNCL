@@ -20,7 +20,7 @@ The simulated data consists of the following two files:
 ### Biological data :deciduous_tree:
 
 The methodology for obtaining biological data of phylogenetic trees with different but overlapping taxa is as follows.
-1. The biological data utilized in this study was obtained from [vertlife.org](https://vertlife.org/phylosubsets/) [[3]](#3), which offers a straightforward method for acquiring tree distributions with specified subsets of taxa. The tool initially prunes a comprehensive dataset to a smaller subset and then samples trees from the selected pseudoposterior distribution.
+1. The biological data utilized in this study was obtained from [vertlife.org](https://vertlife.org/phylosubsets/) [[3]](#ref3), which offers a straightforward method for acquiring tree distributions with specified subsets of taxa. The tool initially prunes a comprehensive dataset to a smaller subset and then samples trees from the selected pseudoposterior distribution.
 2. The following four groups, representing four distinct datasets, have been selected for analysis: :frog: **amphibians** [4], :eagle: **birds** [5], :monkey: **mammals** [3], and :shark: **sharks** [6].
 3. The number of species included in each group varies. In particular, there are 7239 species of amphibians, 9993 species of birds, 5911 species of mammals, and 1192 species of sharks (see [all_species_lists.xlsx](https://github.com/tahiri-lab/KNCL/blob/main/data/all_species_lists.xlsx)).
 4. Each species group comprises subgroups representing species families. For example, species such as Acris blanchardi, Acris crepitans, and Acris gryllus are assumed to represent the Acris subgroup, which is identified by the first word in the species names. In each subgroup, a single species is randomly selected.
@@ -64,7 +64,7 @@ The biological data consists of the following four files:
 
 2. Koshkarov, A., & Tahiri, N. (2023). GPTree Cluster: phylogenetic tree cluster generator in the context of supertree inference. *Bioinformatics Advances*, 3(1). [https://doi.org/10.1093/bioadv/vbad023](https://doi.org/10.1093/bioadv/vbad023)
 
-3. Upham, N. S., J. A. Esselstyn, and W. Jetz. 2019. Inferring the mammal tree: species-level sets of phylogenies for questions in ecology, evolution, and conservation. *PLOS Biology*. [https://doi.org/10.1371/journal.pbio.3000494](https://doi.org/10.1371/journal.pbio.3000494)
+3. <a id="ref3"></a> Upham, N. S., J. A. Esselstyn, and W. Jetz. 2019. Inferring the mammal tree: species-level sets of phylogenies for questions in ecology, evolution, and conservation. *PLOS Biology*. [https://doi.org/10.1371/journal.pbio.3000494](https://doi.org/10.1371/journal.pbio.3000494)
 
 4. Jetz, W., and R. A. Pyron. 2018. The interplay of past diversification and evolutionary isolation with present imperilment across the amphibian tree of life. *Nature Ecology & Evolution*, 1. [https://www.nature.com/articles/s41559-018-0515-5](https://www.nature.com/articles/s41559-018-0515-5)
 
