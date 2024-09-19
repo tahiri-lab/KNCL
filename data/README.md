@@ -16,6 +16,9 @@ The simulated data consists of the following two files:
    - Contains 500 phylogenetic trees simulated by [GPTreeCluster](https://github.com/tahiri-lab/GPTree/tree/GPTreeCluster) [2].
    - Includes 5 clusters of 20 trees for each overlap level: 30%, 40%, 50%, 60%, and 70%.
 
+The distributions for the overlap levels for the simulated data are as follows.
+
+![The distributions for the overlap levels for the simulated data](https://github.com/tahiri-lab/KNCL/blob/main/data/images/overlap_levels_simulated_data.png "The distributions for the overlap levels for the simulated data")
 
 ### Biological data :deciduous_tree:
 
