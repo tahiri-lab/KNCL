@@ -42,4 +42,10 @@ The biological data consists of the following four files:
    - Number of unique pairs of trees: 179700.
    - Number of unique pairs of trees with 100% overlap: 17700 or 9.85%.
 
+3. :monkey: [**`mammals_trees.txt`**](https://github.com/tahiri-lab/KNCL/blob/main/data/mammals_trees.txt):
+   - Contains 800 phylogenetic trees (Newick) of *Mammals* with overlap levels ranging from 10% to 100%.
+   - Total number of unique species: 104.
+   - Average level of overlap: 58.85%.
+   - Number of unique pairs of trees: 319600.
+   - Number of unique pairs of trees with 100% overlap: 31600 or 9.89%.
 To be continued...
