@@ -34,5 +34,12 @@ The biological data consists of the following four files:
    - Average level of overlap: 59.52%.
    - Number of unique pairs of trees: 244650.
    - Number of unique pairs of trees with 100% overlap: 24150 or 9.87%.
+  
+2. :eagle: [**`birds_trees.txt`**](https://github.com/tahiri-lab/KNCL/blob/main/data/birds_trees.txt):
+   - Contains 600 phylogenetic trees (Newick) of *Birds* with overlap levels ranging from 10% to 100%.
+   - Total number of unique species: 173.
+   - Average level of overlap: 58.68%.
+   - Number of unique pairs of trees: 179700.
+   - Number of unique pairs of trees with 100% overlap: 17700 or 9.85%.
 
 To be continued...
