@@ -48,4 +48,10 @@ The biological data consists of the following four files:
    - Average level of overlap: 58.85%.
    - Number of unique pairs of trees: 319600.
    - Number of unique pairs of trees with 100% overlap: 31600 or 9.89%.
-To be continued...
+
+4. :shark: [**`sharks_trees.txt`**](https://github.com/tahiri-lab/KNCL/blob/main/data/sharks_trees.txt):
+   - Contains 900 phylogenetic trees (Newick) of *Sharks* with overlap levels ranging from 10% to 100%.
+   - Total number of unique species: 69.
+   - Average level of overlap: 59.21%.
+   - Number of unique pairs of trees: 404550.
+   - Number of unique pairs of trees with 100% overlap: 40050 or 9.9%.
