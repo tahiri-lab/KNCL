@@ -27,7 +27,7 @@ The methodology for obtaining biological data of phylogenetic trees with differe
 2. The following four groups, representing four distinct datasets, have been selected for analysis: :frog: **amphibians** [[4]](#ref4), :eagle: **birds** [[5]](#ref5), :monkey: **mammals** [[3]](#ref3), and :shark: **sharks** [[6]](#ref6).
 3. The number of species included in each group varies. In particular, there are 7239 species of amphibians, 9993 species of birds, 5911 species of mammals, and 1192 species of sharks (see [all_species_lists.xlsx](https://github.com/tahiri-lab/KNCL/blob/main/data/all_species_lists.xlsx)).
 4. Each species group comprises subgroups representing species families. For example, species such as Acris blanchardi, Acris crepitans, and Acris gryllus are assumed to represent the Acris subgroup, which is identified by the first word in the species names. In each subgroup, a single species is randomly selected.
-5. The resulting aggregated dataset for each species subgroup is subsequently employed in the creation of a dataset of overlapping trees. The final dataset for each group consists of a number of subsets that overlap from 10% to 90% (see the following picture).
+5. The resulting aggregated dataset for each species subgroup is subsequently employed in the creation of a dataset of overlapping trees. The final dataset for each group is comprised of 10 subsets that overlap by species, with the degree of overlap ranging from 10% to 90% (see the following Figure).
 
 ![Levels of overlap among subsets for 4 groups of species](https://github.com/tahiri-lab/KNCL/blob/main/data/images/overlaps_subsets.png "Levels of overlap among subsets for 4 groups of species")
 
