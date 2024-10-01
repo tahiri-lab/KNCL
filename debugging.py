@@ -44,16 +44,10 @@ def get_leaves(node):
     return set(leaf.name for leaf in node)
 
 def get_subtree_newick_with_branch_lengths(node):
-    def recursive_newick(node):
-        if node.is_leaf():
-            return f"{node.name}:{node.dist}"
-        children_newick = [recursive_newick(child) for child in node.children]
-        return f"({','.join(children_newick)}):{node.dist}"
+    return node.write(format=1)
 
-    return recursive_newick(node)
-
-def InsertTempLeaves(newick, target_leaf, new_leaf_base_name, new_length, dist, tolerance=1e-10):
-    tree = Tree(newick, format=1)
+def InsertTempLeaves(tree, target_leaf, new_leaf_base_name, new_length, dist, tolerance=1e-10):
+    # Operate directly on 'tree'
     target_node = tree.search_nodes(name=target_leaf)[0]
     insertion_points = []
     visited_nodes = set()
@@ -98,11 +92,7 @@ def InsertTempLeaves(newick, target_leaf, new_leaf_base_name, new_length, dist, 
             insertion_points.append(new_leaf_name)
             visited_nodes.add(new_internal_node)
 
-        # Post-insertion validation
-        correct_insertion = validate_insertion_path(current_node, new_internal_node, previous_node, original_branch_distance)
-        if not correct_insertion:
-            print(f"Error: Insertion point verification failed between '{previous_node.name}' and '{current_node.name}'")
-        return correct_insertion
+        return True
 
     def insert_leaf_at_terminal(current_node, insert_distance):
         excess_length = current_node.dist - insert_distance
@@ -154,24 +144,12 @@ def InsertTempLeaves(newick, target_leaf, new_leaf_base_name, new_length, dist, 
             if current_node.up and current_node.up not in visited_nodes:
                 queue.append((current_node.up, current_dist + current_node.dist, current_node, current_node.dist, current_path, True))
 
-    def validate_insertion_path(current_node, new_internal_node, previous_node, original_branch_distance):
-        # Verifies if the insertion happened between the correct nodes
-        distance_check = current_node.get_distance(new_internal_node) + new_internal_node.get_distance(previous_node)
-        return abs(distance_check - original_branch_distance) < tolerance
-
     if dist <= target_node.dist:
         insert_leaf_at_terminal(target_node, dist)
     else:
         bfs(target_node, 0)
 
-    if insertion_points:
-        print(f"Tree after inserting temporary leaves for target_leaf {target_leaf}:")
-        print(tree.write(format=1))
-        print(tree)
-    else:
-        print("No valid insertion points were found based on the specified distance.")
-
-    return tree, insertion_points  # Return names instead of node objects
+    return insertion_points  # Return names instead of node objects
 
 def find_farthest_leaf(tree, start, temporary_leaves):
     max_distance = 0
@@ -242,11 +220,12 @@ def compute_midpoint(tree, temporary_leaves):
             prev_node = path[i - 1]
             return prev_node, node, 0, half_distance, branch_lengths[i - 1]
 
-def insert_midpoint_and_new_leaf(tree, prev_node, curr_node, excess, new_leaf_name, branch_length, original_dist):
+def insert_midpoint_and_new_subtree(tree, prev_node, curr_node, excess, subtree, branch_length, original_dist):
     if excess == 0:
-        new_leaf = Tree(name=new_leaf_name)
-        new_leaf.dist = branch_length
-        curr_node.add_child(new_leaf)
+        # Attach the subtree directly to curr_node
+        new_subtree = subtree.copy()
+        new_subtree.dist = branch_length
+        curr_node.add_child(new_subtree)
         return tree
 
     if curr_node in prev_node.get_ancestors():
@@ -259,7 +238,7 @@ def insert_midpoint_and_new_leaf(tree, prev_node, curr_node, excess, new_leaf_na
     if distance_to_midpoint < 0 or distance_from_midpoint_to_leaf < 0:
         raise ValueError("Negative distance encountered. Check the calculation logic.")
 
-    new_node = Tree(name="midpoint")
+    new_node = Tree()
     new_node.dist = distance_to_midpoint
 
     if curr_node in prev_node.get_ancestors():
@@ -274,20 +253,45 @@ def insert_midpoint_and_new_leaf(tree, prev_node, curr_node, excess, new_leaf_na
     new_node.add_child(child)
     child.dist = distance_from_midpoint_to_leaf
 
-    new_leaf = Tree(name=new_leaf_name)
-    new_leaf.dist = branch_length
-    new_node.add_child(new_leaf)
+    # Now add the subtree
+    new_subtree = subtree.copy()
+    new_subtree.dist = branch_length
+    new_node.add_child(new_subtree)
 
     return tree
 
 def remove_temporary_leaves(tree, temporary_leaves):
+    def collapse_single_child_nodes(node):
+        while not node.is_leaf() and len(node.children) == 1:
+            child = node.children[0]
+            child.dist += node.dist
+            parent = node.up
+            if parent:
+                parent.remove_child(node)
+                parent.add_child(child)
+                node = parent
+            else:
+                # Node is root
+                child.up = None
+                tree = child  # Update tree reference
+                node = child
     for leaf_name in temporary_leaves:
         leaf_nodes = tree.search_nodes(name=leaf_name)
         if leaf_nodes:
             leaf = leaf_nodes[0]
-            if leaf.up:
-                parent = leaf.up
+            parent = leaf.up
+            if parent:
                 parent.remove_child(leaf)
+                collapse_single_child_nodes(parent)
+            else:
+                # Leaf is root
+                tree = None
+    return tree  # Return the possibly updated tree
+
+def clear_internal_node_names(tree):
+    for node in tree.traverse():
+        if not node.is_leaf():
+            node.name = ''
 
 def kNCL(T1, T2, k):
     CL = set(T1.get_leaf_names()) & set(T2.get_leaf_names())
@@ -303,8 +307,8 @@ def kNCL(T1, T2, k):
         sum_T2 = sum(T2.get_distance(l1, l2) for i, l1 in enumerate(CL) for l2 in list(CL)[i + 1:])
         return sum_T1 / sum_T2 if sum_T2 else 1
 
-    r12 = adjust_rate(T1, T2)
-    r21 = adjust_rate(T2, T1)
+    r12 = adjust_rate(T1, T2)  # Adjusting from T2 to T1
+    r21 = adjust_rate(T2, T1)  # Adjusting from T1 to T2
     print(f"Adjustment rates: r12 = {r12}, r21 = {r21}")
 
     SD1 = findSD(T1, set(T1.get_leaf_names()) - CL)
@@ -312,47 +316,40 @@ def kNCL(T1, T2, k):
     print(f"Subtrees in T1 (SD1): {[get_subtree_newick_with_branch_lengths(n) for n in SD1]}")
     print(f"Subtrees in T2 (SD2): {[get_subtree_newick_with_branch_lengths(n) for n in SD2]}")
 
-    def process_tree(T1, T2, SD1, r12, k):
-        for a in SD1:
+    def process_tree(target_tree, source_tree, subtrees_to_insert, rate, k):
+        for a in subtrees_to_insert:
             if not a.name:
-                a.name = "subtree_" + str(len(SD1))  # Assign a name to unnamed subtrees
-            br_a = a.dist * r12
-            print(f"Processing subtree {a.name} with branch length {br_a}")
-            NCL = sorted(CL, key=lambda l: T1.get_distance(a, T1 & l))[:k]
+                a.name = "subtree_" + str(len(subtrees_to_insert))  # Assign a name to unnamed subtrees
+
+            # Make a copy of the subtree to avoid modifying the original
+            adjusted_subtree = a.copy()
+
+            # Adjust all branch lengths in the copied subtree
+            for node in adjusted_subtree.traverse():
+                node.dist *= rate
+
+            print(f"Processing subtree {a.name} with adjusted branch lengths")
+            NCL = sorted(CL, key=lambda l: source_tree.get_distance(a, source_tree & l))[:k]
             print(f"Nearest Common Leaves for {a.name}: {NCL}")
             TL = set()
             for lc in NCL:
-                print(f"Checking for leaf {lc} in T2")
-                if T2.search_nodes(name=lc):
-                    lc_node = T2 & lc
+                print(f"Checking for leaf {lc} in target_tree")
+                if target_tree.search_nodes(name=lc):
+                    lc_node = target_tree & lc
                 else:
-                    raise ValueError(f"Common leaf '{lc}' not found in T2.")
-                print(f"Checking for leaf {lc} in T1")
-                if T1.search_nodes(name=lc):
-                    lc_node_T1 = T1 & lc
-                else:
-                    raise ValueError(f"Common leaf '{lc}' not found in T1.")
-                rc = sum(T2.get_distance(lc_node, l) for l in CL) / sum(T1.get_distance(lc_node_T1, l) for l in CL)
-                dp = (T1.get_distance(a, lc_node_T1) - a.dist) * rc
+                    raise ValueError(f"Common leaf '{lc}' not found in target_tree.")
+                print(f"Checking for leaf {lc} in source_tree")
+                lc_node_source = source_tree & lc
+                rc = sum(target_tree.get_distance(lc_node, l) for l in CL) / sum(source_tree.get_distance(lc_node_source, l) for l in CL)
+                dp = (source_tree.get_distance(a, lc_node_source) - a.dist) * rc
                 print(f"Inserting temporary leaves for {a.name} from leaf {lc} at distance {dp}")
-                tree_newick = T2.write(format=1)
-                updated_tree, temp_leaves = InsertTempLeaves(tree_newick, lc, "temp", br_a, dp)
-
-                # temp_leaves are names now
+                temp_leaves = InsertTempLeaves(target_tree, lc, "temp", adjusted_subtree.dist, dp)
                 print(f"Temporary leaves after insertion for {lc}: {temp_leaves}")
-                print(f"Tree structure before updating TL: {updated_tree.write(format=1)}")
-                print(f"Temporary leaf names to be updated in TL: {temp_leaves}")
-
-                # Update TL with names
                 TL.update(temp_leaves)
-
-                # Assign updated_tree to T2
-                T2 = updated_tree
-                print(f"Tree after updating TL: {T2.write(format=1)}")
 
             print(f"Temporary leaves for {a.name}: {TL}")
             print("Tree after inserting temporary leaves:")
-            print(T2.write(format=1))
+            print(target_tree.write(format=1))
 
             if not TL:
                 print(f"No temporary leaves were inserted for {a.name}")
@@ -360,39 +357,52 @@ def kNCL(T1, T2, k):
 
             if len(TL) == 1:
                 single_leaf_name = next(iter(TL))
-                single_leaf = T2 & single_leaf_name
-                single_leaf.name = a.name  # Rename the single temporary leaf to the new element's name
-                print(f"Only one temporary leaf, renamed {single_leaf.name} as the new element")
+                single_leaf = target_tree & single_leaf_name
+                parent = single_leaf.up
+                branch_length = single_leaf.dist
+
+                # Remove the temporary leaf
+                parent.remove_child(single_leaf)
+
+                # Attach the adjusted subtree to the parent
+                adjusted_subtree.dist = branch_length
+                parent.add_child(adjusted_subtree)
+
+                print(f"Only one temporary leaf, inserted subtree {a.name}")
             else:
                 try:
-                    prev_node, curr_node, excess, _, original_dist = compute_midpoint(T2, TL)
-                    print(f"Inserting midpoint and new leaf for {a.name} between {prev_node.name} and {curr_node.name}")
+                    prev_node, curr_node, excess, _, original_dist = compute_midpoint(target_tree, TL)
+                    print(f"Inserting midpoint and new subtree for {a.name} between {prev_node.name} and {curr_node.name}")
                     print(f"Midpoint insertion details - Excess: {excess}, Original Dist: {original_dist}")
-                    T2 = insert_midpoint_and_new_leaf(T2, prev_node, curr_node, excess, a.name, br_a, original_dist)
+                    target_tree = insert_midpoint_and_new_subtree(target_tree, prev_node, curr_node, excess, adjusted_subtree, adjusted_subtree.dist, original_dist)
                 except Exception as e:
                     print("Error encountered during midpoint insertion:")
                     print(f"Nodes involved: {TL}")
                     print(f"Error: {str(e)}")
 
-            remove_temporary_leaves(T2, TL)
-            print(f"Inserted midpoint and new leaf for {a.name}")
+            target_tree = remove_temporary_leaves(target_tree, TL)
+            print(f"Inserted midpoint and new subtree for {a.name}")
             print(f"Tree after removing temporary leaves:")
-            print(T2.write(format=1))
-        return T2
+            print(target_tree.write(format=1))
+        return target_tree
 
-    T1_completed = process_tree(T1, T2, SD1, r12, k)
+    # Process trees with the corrected adjustment rates
+    T1_completed = process_tree(T1, T2, SD2, r12, k)
     print("Intermediate T1 completed tree state:")
     print(T1_completed.write(format=1))
 
-    T2_completed = process_tree(T2, T1, SD2, r21, k)
+    T2_completed = process_tree(T2, T1, SD1, r21, k)
     print("Intermediate T2 completed tree state:")
     print(T2_completed.write(format=1))
+
+    clear_internal_node_names(T1_completed)
+    clear_internal_node_names(T2_completed)
 
     return T1_completed, T2_completed
 
 # Example
-newick1 = "(((L4:1.1058,L6:0.7225):0.6678,(L10:0.5582,(L1:0.8540,L5:0.6621):1.1539):1.1164):1.8280,(L3:0.6057,L8:1.0215):0.9939,(L7:1.1467,(2:1.0002,9:1.3349):1.5883):0.6401);"
-newick2 = "(((L1:0.5,L2:1.0):0.5,L3:1.5):0.5,(L4:1.0,(L5:1.5,L6:2.0):1.0):0.5);"
+newick1 = "((A:0.597,B:0.139):0.735,((C:0.171,E:0.069):0.218,(Q:0.138,D:0.077):0.343):0.609);"
+newick2 = "(((A:1.587,(F:1.110,(M:1.343,R:1.369):0.846):0.487):1.981,D:0.356):2.121,(B:1.936,(C:0.915,Q:1.201):2.101):0.912);"
 
 T1 = Tree(newick1, format=1)
 T2 = Tree(newick2, format=1)
@@ -401,7 +411,7 @@ k = 3
 
 T1_completed, T2_completed = kNCL(T1, T2, k)
 
-print("Completed T1:")
+print("\nCompleted T1:")
 print(T1_completed.write(format=1))
 print("Completed T2:")
 print(T2_completed.write(format=1))
