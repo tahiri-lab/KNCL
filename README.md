@@ -34,8 +34,8 @@ python3 kncl.py -i <input.newick> <k> -o <output.txt>
 #### Example :bookmark:
 Given an input file `example.newick` with the following content:
 ```
-(A:0.1,B:0.2,(C:0.3,D:0.4):0.5);
-(E:0.1,F:0.2,(C:0.3,D:0.4):0.5);
+(((((((Callimic:0.023313,Ateles:0.010045)59:0.003307,(((Pan:0.001001,Homo:0.003222)98:0.007021,Nomascus:0.019337)65:0.006297,Macaca:0.022545)75:0.003800)100:0.056141,Tarsius:0.070541)40:0.004811,(Otolemur:0.080291,Lemur:0.073501)67:0.014141)54:0.014589,Tupaia:0.110178)85:0.046160,Cynoceph:0.040415)100:0.356615,Rattus:0.048351,Mus:0.036439);
+(((((Hylobate:0.006938,(Pongo:0.007054,(Pan:0.002692,Gorilla:0.003234)100:0.002698)96:0.001954)100:0.008626,Macaca:0.020688)100:0.010416,(Ateles:0.009814,Alouatta:0.013133)100:0.024863)100:0.030640,(Tarsius:0.097437,(Otolemur:0.075033,Lemur:0.046192)100:0.019542)65:0.007328)100:0.185167,Rattus:0.048223,Mus:0.063981);
 ```
 Run the script as:
 ```bash
