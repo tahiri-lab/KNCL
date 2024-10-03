@@ -295,8 +295,8 @@ def clear_internal_node_names(tree):
 
 def kNCL(T1, T2, k):
     CL = set(T1.get_leaf_names()) & set(T2.get_leaf_names())
-    if len(CL) < 2:
-        raise ValueError("The input trees must have at least two common leaves.")
+    if len(CL) < 3:
+        raise ValueError("The input trees must have at least 3 common leaves.")
     if k < 2 or k > len(CL):
         raise ValueError("The value of k must be between 2 and the number of common leaves.")
 
