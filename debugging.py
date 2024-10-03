@@ -222,7 +222,7 @@ def compute_midpoint(tree, temporary_leaves):
 
 def insert_midpoint_and_new_subtree(tree, prev_node, curr_node, excess, subtree, branch_length, original_dist):
     if excess == 0:
-        # Attach the subtree directly to curr_node
+        # Attach the subtree directly to current node curr_node
         new_subtree = subtree.copy()
         new_subtree.dist = branch_length
         curr_node.add_child(new_subtree)
@@ -400,7 +400,7 @@ def kNCL(T1, T2, k):
 
     return T1_completed, T2_completed
 
-# Example
+# Test example
 newick1 = "((A:0.597,B:0.139):0.735,((C:0.171,E:0.069):0.218,(Q:0.138,D:0.077):0.343):0.609);"
 newick2 = "(((A:1.587,(F:1.110,(M:1.343,R:1.369):0.846):0.487):1.981,D:0.356):2.121,(B:1.936,(C:0.915,Q:1.201):2.101):0.912);"
 
