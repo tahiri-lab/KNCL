@@ -6,7 +6,7 @@
 > Koshkarov, A. & Tahiri, N. (2024). *k*-Nearest Common Leaves algorithm for phylogenetic tree completion (in progress).
 
 #### Description :bookmark_tabs:
-`kncl.py` is a Python script designed to complete 2 phylogenetic trees defined on different but mutually overlapping sets of taxa on the union of their taxa sets and compute the Branch Score Distance (BSD(+)) between the completed phylogenetic trees. The BSD is a measure of the dissimilarity between two trees based on their branch lengths. The script processes trees in Newick format, comparing the first tree in the input file with every other tree. It outputs the completed versions of these trees, their BSD(+) distance, the pruned versions of the trees, and the BSD(-) distance.
+`kncl.py` is a Python script designed to complete 2 phylogenetic trees defined on different but mutually overlapping sets of taxa on the union of their taxa sets and compute the Branch Score Distance (BSD(+)) between the completed phylogenetic trees. The BSD is a measure of the dissimilarity between two trees based on their branch lengths (see more details [here](https://www.mdpi.com/2073-8994/16/7/790)). The script processes trees in Newick format, comparing the first tree in the input file with every other tree. It outputs the completed versions of these trees, their BSD(+) distance, and the BSD(-) distance.
 
 >:pushpin: **Current Status**
 >
@@ -28,7 +28,7 @@ Run the script using the command:
 python3 kncl.py -i <input.newick> <k> -o <output.txt>
 ```
 - `<input.newick>`: File containing two or more trees in Newick format, each tree on a separate line.
-- `<k>`: Integer value of k for the k-nearest common leaves algorithm.
+- `<k>`: Integer value of *k* for the *k*-nearest common leaves algorithm (*k* must be between 2 and the number of common leaves).
 - `<output.txt>`: File where the output will be saved.
 
 #### Example :bookmark:
@@ -44,17 +44,14 @@ python3 kncl.py -i example.newick 2 -o output.txt
 
 #### Output :book:
 The `output.txt` file will contain:
-- Completed versions of each tree pair.
 - BSD(+) distances between the completed trees.
-- Pruned versions of the trees on their common taxa.
 - BSD(-) distances for the pruned trees.
+- Completed versions of each tree pair.
 
 #### Notes :pencil:
 - Ensure the input Newick file is correctly formatted.
-- The script handles trees with no common leaves by joining them under a new root.
-- The BSD(+) calculations assume the trees are correctly parsed and all necessary functions are implemented.
 
-The description of the k-Nearest Common Leaves algorithm can be found [here](https://github.com/tahiri-lab/KNCL/blob/main/algorithm.md).
+The description of the *k*-Nearest Common Leaves algorithm can be found [here](https://github.com/tahiri-lab/KNCL/blob/main/algorithm.md).
 
 Debugging of the updated version of the *k*-NCL algorithm is in progress.
 
