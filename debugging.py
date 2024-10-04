@@ -46,7 +46,7 @@ def get_leaves(node):
 def get_subtree_newick_with_branch_lengths(node):
     return node.write(format=1)
 
-def InsertTempLeaves(tree, target_leaf, new_leaf_base_name, new_length, dist, tolerance=1e-10):
+def InsertTempLeaves(tree, target_leaf, new_leaf_base_name, new_length, dist, inserted_leaves, tolerance=1e-10):
     # Operate directly on 'tree'
     target_node = tree.search_nodes(name=target_leaf)[0]
     insertion_points = []
@@ -95,6 +95,8 @@ def InsertTempLeaves(tree, target_leaf, new_leaf_base_name, new_length, dist, to
         return True
 
     def insert_leaf_at_terminal(current_node, insert_distance):
+        if current_node.name in inserted_leaves:
+            return False
         excess_length = current_node.dist - insert_distance
         if excess_length < 0:
             excess_length = 0
@@ -117,7 +119,7 @@ def InsertTempLeaves(tree, target_leaf, new_leaf_base_name, new_length, dist, to
         queue = [(node, accumulated_distance, None, 0, [], False)]
         while queue:
             current_node, current_dist, prev_node, prev_dist, path, toward_root = queue.pop(0)
-            if current_node in visited_nodes or 'temp' in current_node.name:
+            if current_node in visited_nodes or 'temp' in current_node.name or current_node.name in inserted_leaves:
                 continue
             visited_nodes.add(current_node)
             current_path = path + [current_node.name]
@@ -138,10 +140,10 @@ def InsertTempLeaves(tree, target_leaf, new_leaf_base_name, new_length, dist, to
                 continue
 
             for child in current_node.children:
-                if child not in visited_nodes:
+                if child not in visited_nodes and child.name not in inserted_leaves:
                     queue.append((child, current_dist + child.dist, current_node, child.dist, current_path, False))
 
-            if current_node.up and current_node.up not in visited_nodes:
+            if current_node.up and current_node.up not in visited_nodes and current_node.up.name not in inserted_leaves:
                 queue.append((current_node.up, current_dist + current_node.dist, current_node, current_node.dist, current_path, True))
 
     if dist <= target_node.dist:
@@ -222,7 +224,7 @@ def compute_midpoint(tree, temporary_leaves):
 
 def insert_midpoint_and_new_subtree(tree, prev_node, curr_node, excess, subtree, branch_length, original_dist):
     if excess == 0:
-        # Attach the subtree directly to current node curr_node
+        # Attach the subtree directly to curr_node
         new_subtree = subtree.copy()
         new_subtree.dist = branch_length
         curr_node.add_child(new_subtree)
@@ -316,6 +318,8 @@ def kNCL(T1, T2, k):
     print(f"Subtrees in T1 (SD1): {[get_subtree_newick_with_branch_lengths(n) for n in SD1]}")
     print(f"Subtrees in T2 (SD2): {[get_subtree_newick_with_branch_lengths(n) for n in SD2]}")
 
+    inserted_leaves = set()  # Track inserted leaves to ignore them in future iterations
+
     def process_tree(target_tree, source_tree, subtrees_to_insert, rate, k):
         for a in subtrees_to_insert:
             if not a.name:
@@ -343,9 +347,10 @@ def kNCL(T1, T2, k):
                 rc = sum(target_tree.get_distance(lc_node, l) for l in CL) / sum(source_tree.get_distance(lc_node_source, l) for l in CL)
                 dp = (source_tree.get_distance(a, lc_node_source) - a.dist) * rc
                 print(f"Inserting temporary leaves for {a.name} from leaf {lc} at distance {dp}")
-                temp_leaves = InsertTempLeaves(target_tree, lc, "temp", adjusted_subtree.dist, dp)
+                temp_leaves = InsertTempLeaves(target_tree, lc, "temp", adjusted_subtree.dist, dp, inserted_leaves)
                 print(f"Temporary leaves after insertion for {lc}: {temp_leaves}")
                 TL.update(temp_leaves)
+                inserted_leaves.update(temp_leaves)  # Add the inserted leaves to the set
 
             print(f"Temporary leaves for {a.name}: {TL}")
             print("Tree after inserting temporary leaves:")
