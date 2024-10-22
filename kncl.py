@@ -412,8 +412,12 @@ def BSD(T1, T2, k):
     if len(common_leaves) < 3:
         return None, None, None, None
 
+    # Copy trees to avoid in-place modification
+    T1_copy = T1.copy()
+    T2_copy = T2.copy()
+    
     # Complete both trees using the k-NCL function
-    T1_completed, T2_completed = kNCL(T1, T2, k)
+    T1_completed, T2_completed = kNCL(T1_copy, T2_copy, k)
 
     # Get the leaves of the completed trees
     leaves_completed = set(leaf.name for leaf in T1_completed.get_leaves())
