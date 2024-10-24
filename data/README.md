@@ -34,32 +34,32 @@ The methodology for obtaining biological data of phylogenetic trees with differe
 The biological data consists of the following four files:
 
 1. :frog: [**`amphibians_trees.txt`**](https://github.com/tahiri-lab/KNCL/blob/main/data/amphibians_trees.txt):
-   - Contains 700 phylogenetic trees (Newick) of *Amphibians* with overlap levels ranging from 10% to 100%.
-   - Total number of unique species: 137.
-   - Average level of overlap: 59.52%.
-   - Number of unique pairs of trees: 244650.
-   - Number of unique pairs of trees with 100% overlap: 24150 or 9.87%.
+   - Contains 550 phylogenetic trees (Newick) of *Amphibians* with overlap levels ranging from 10% to 100%.
+   - Total number of unique species: 120.
+   - Average level of overlap: 58.71%.
+   - Number of unique pairs of trees: 150975.
+   - Number of unique pairs of trees with 100% overlap: 14850 or 9.84%.
   
 2. :eagle: [**`birds_trees.txt`**](https://github.com/tahiri-lab/KNCL/blob/main/data/birds_trees.txt):
    - Contains 600 phylogenetic trees (Newick) of *Birds* with overlap levels ranging from 10% to 100%.
-   - Total number of unique species: 173.
-   - Average level of overlap: 58.68%.
+   - Total number of unique species: 135.
+   - Average level of overlap: 58.78%.
    - Number of unique pairs of trees: 179700.
    - Number of unique pairs of trees with 100% overlap: 17700 or 9.85%.
 
 3. :monkey: [**`mammals_trees.txt`**](https://github.com/tahiri-lab/KNCL/blob/main/data/mammals_trees.txt):
-   - Contains 800 phylogenetic trees (Newick) of *Mammals* with overlap levels ranging from 10% to 100%.
-   - Total number of unique species: 104.
-   - Average level of overlap: 58.85%.
-   - Number of unique pairs of trees: 319600.
-   - Number of unique pairs of trees with 100% overlap: 31600 or 9.89%.
+   - Contains 500 phylogenetic trees (Newick) of *Mammals* with overlap levels ranging from 10% to 100%.
+   - Total number of unique species: 105.
+   - Average level of overlap: 58.88%.
+   - Number of unique pairs of trees: 124750.
+   - Number of unique pairs of trees with 100% overlap: 12250 or 9.82%.
 
 4. :shark: [**`sharks_trees.txt`**](https://github.com/tahiri-lab/KNCL/blob/main/data/sharks_trees.txt):
-   - Contains 900 phylogenetic trees (Newick) of *Sharks* with overlap levels ranging from 10% to 100%.
-   - Total number of unique species: 69.
-   - Average level of overlap: 59.21%.
-   - Number of unique pairs of trees: 404550.
-   - Number of unique pairs of trees with 100% overlap: 40050 or 9.9%.
+   - Contains 450 phylogenetic trees (Newick) of *Sharks* with overlap levels ranging from 10% to 100%.
+   - Total number of unique species: 95.
+   - Average level of overlap: 58.81%.
+   - Number of unique pairs of trees: 101025.
+   - Number of unique pairs of trees with 100% overlap: 9900 or 9.80%.
 
 The distributions of overlap levels of biological data for all possible pairs of trees (without repeats) are presented below.
 
