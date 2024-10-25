@@ -12,6 +12,10 @@
 >
 >Please note that the current version of `kncl.py` is under development. It is not a final version and requires further improvements and testing to ensure robustness and accuracy in various use cases.
 
+  - Biologically meaningful datasets of partially overlapping phylogenetic trees with branch lengths are available [here](https://github.com/tahiri-lab/KNCL/tree/main/data/).
+
+  - The data construction pipeline is available [here](https://github.com/tahiri-lab/KNCL/tree/main/data/data-pipeline).
+
 #### Requirements :clipboard:
 - Python 3.x
 - `ete3` Python package
