@@ -63,37 +63,36 @@ def InsertTempLeaves(tree, target_leaf, new_leaf_base_name, new_length, dist, in
             internal_node_counter += 1
 
     def robust_insert_leaf_at_node(current_node, insert_distance, previous_node, original_branch_distance, toward_root=False):
-        excess_length = original_branch_distance - insert_distance
-
-        if excess_length < 0:
-            excess_length = 0
-
-        # Handle traversal toward the root by ensuring correct branch selection
+        # Swap current_node and previous_node if moving towards the root
         if toward_root:
-            temp = current_node
-            current_node = previous_node
-            previous_node = temp
+            current_node, previous_node = previous_node, current_node
+            insert_distance = original_branch_distance - insert_distance
 
-        # Detach the previous node from its parent (the node leading to the root)
+        # Calculate distances for the new branches
+        dist_to_parent = insert_distance
+        dist_to_previous_node = original_branch_distance - insert_distance
+
+        if dist_to_parent < 0:
+            dist_to_parent = 0
+        if dist_to_previous_node < 0:
+            dist_to_previous_node = 0
+
+        # Detach previous_node from its parent
         parent = previous_node.up
         if parent:
-            previous_node.detach()
-
-        if parent is None:
-            new_internal_node = tree.add_child(dist=excess_length)
-            current_node.detach()
-            new_internal_node.add_child(current_node, dist=insert_distance)
-            new_leaf_name = f"{target_leaf}_{new_leaf_base_name}{len(insertion_points) + 1}"
-            new_internal_node.add_child(name=new_leaf_name, dist=new_length)
-            insertion_points.append(new_leaf_name)
-            visited_nodes.add(new_internal_node)
+            parent.remove_child(previous_node)
         else:
-            new_internal_node = parent.add_child(dist=excess_length)
-            new_internal_node.add_child(previous_node, dist=insert_distance)
-            new_leaf_name = f"{target_leaf}_{new_leaf_base_name}{len(insertion_points) + 1}"
-            new_internal_node.add_child(name=new_leaf_name, dist=new_length)
-            insertion_points.append(new_leaf_name)
-            visited_nodes.add(new_internal_node)
+            parent = tree  # previous_node is root
+
+        # Create new internal node
+        new_internal_node = parent.add_child(dist=dist_to_parent)
+        new_internal_node.add_child(previous_node, dist=dist_to_previous_node)
+
+        # Add temporary leaf
+        new_leaf_name = f"{target_leaf}_{new_leaf_base_name}{len(insertion_points) + 1}"
+        new_internal_node.add_child(name=new_leaf_name, dist=new_length)
+        insertion_points.append(new_leaf_name)
+        visited_nodes.add(new_internal_node)
 
         return True
 
