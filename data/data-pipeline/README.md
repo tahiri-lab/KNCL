@@ -94,7 +94,7 @@ python overlap_tree_pipeline.py birds 135 70 your@email.com
 
 ---
 
-## Script Workflow
+## Script workflow
 
 Here's an overview of what the script does:
 
@@ -111,7 +111,7 @@ Here's an overview of what the script does:
 
 ## Examples
 
-### Example Command
+### Example command
 
 ```bash
 python overlap_tree_pipeline.py mammals 95 100 your@email.com
@@ -122,7 +122,7 @@ python overlap_tree_pipeline.py mammals 95 100 your@email.com
 - **Number of Trees**: 100
 - **Email**: your@email.com
 
-### Expected Output
+### Expected output
 
 - `selected_species.csv`: Contains 95 randomly selected mammal species.
 - `Mammals_overlapping_subsets.csv`: Contains the 10 overlapping subsets.
@@ -148,20 +148,20 @@ Once you have the data, be sure to cite the source:
 
 ## Troubleshooting
 
-### 🐞 Common Issues and Solutions
+### 🐞 Common issues and solutions
 
 #### 1. `all_species_lists.csv` Not Found
 
 **Solution**: Ensure that the `all_species_lists.csv` file is present in the same directory as the script.
 
-#### 2. ChromeDriver Errors
+#### 2. ChromeDriver errors
 
 **Solution**:
 
 - Verify that ChromeDriver is installed and matches your Chrome browser version.
 - Try `pip install chromedriver-binary`
 
-#### 3. Selenium Errors During Tree Requests
+#### 3. Selenium errors during tree requests
 
 **Solution**:
 
@@ -169,14 +169,14 @@ Once you have the data, be sure to cite the source:
 - Increase the explicit wait times in the `submit_tree_request` function.
 - Ensure the VertLife website is accessible.
 
-#### 4. Download Errors for Subsets 9 and 10
+#### 4. Download errors for subsets 9 and 10
 
 **Solution**:
 
 - The script includes a 60-second delay before downloading to mitigate this issue.
 - If problems persist, consider increasing the delay.
 
-#### 5. Incompatible Python Version
+#### 5. Incompatible Python version
 
 **Solution**: Use Python 3.6 or higher.
 
@@ -184,8 +184,8 @@ Once you have the data, be sure to cite the source:
 
 ## Acknowledgments
 
-- **VertLife Project**: For providing access to phylogenetic tree data.
-- **Authors of the Datasets**: Please refer to the citations provided for each species group.
+- **VertLife project**: For providing access to phylogenetic tree data.
+- **Authors of the datasets**: Please refer to the citations provided for each species group.
 
 ---
 
