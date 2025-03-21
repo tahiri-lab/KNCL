@@ -3,7 +3,7 @@
 """
 Script Name: <overlap_tree_pipeline.py>
 Authors: Aleksandr Koshkarov and Nadia Tahiri
-Last Modified: 2024-10-25
+Last Modified: 2025-03-21
 Description: This Python script automates the process of creating datasets of biologically meaningful partially overlapping phylogenetic trees with branch lengths.
 """
 
@@ -142,6 +142,7 @@ def create_overlapping_subsets(df, p_values=[0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 
             subset_species = species_list[subset_start:subset_end]
             if len(subset_species) < k:
                 subset_species += species_list[:k - len(subset_species)]
+            # alternative: subset_species = [species_list[(j % n)] for j in range(subset_start, subset_start + k)]
 
             subsets[f"Subset {i}"] = subset_species
 
