@@ -72,6 +72,10 @@ def find_k_from_n(n, max_k=1000, p_values=[0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.
             return k
     return None
 
+# Alternative:
+# p_min = min(p_values)
+# k = round(n * (1 + p_min) / 2)
+
 # Load the data from the CSV file
 data = pd.read_csv('all_species_lists.csv')
 
