@@ -222,8 +222,6 @@ def find_optimal_insertion_point(target_tree, subtree_root, ncl_list, leaf_based
     then evaluate the quadratic objective function:
       OF(x) = sum_{l_c in NCL} (d^(T'_target)(l_c, v(x)) - d_p(l_c, subtree_root))^2.
       
-    This modified version enforces a minimal retained branch length for terminal edges.
-    
     Returns:
       best_edge: the edge (parent, child) where insertion minimizes OF(x),
       best_x: the optimal x value on that edge,
@@ -311,8 +309,8 @@ def insert_subtree_at_point(target_tree, edge, x_opt, subtree_root):
     defined by (parent, child) using the optimal x value. Instead of calling
     parent.remove_child(child) directly (which may fail if the child object differs),
     we first search for the appropriate child to remove.
-    Importantly, instead of forcing the connection branch length to zero, we
-    set it to the stored (and scaled) original root branch length of the subtree.
+    Importantly, we set the connection branch length to the stored (and scaled) 
+    original root branch length of the subtree.
     """
     parent, child = edge
     original_len = child.dist
@@ -365,7 +363,7 @@ def remove_internal_node_names(tree):
             node.name = ""
 
 ########################################
-# Main k-NCL function (with debug prints)
+# Main k-NCL function
 ########################################
 def kNCL(T1_original, T2_original, k):
     """
