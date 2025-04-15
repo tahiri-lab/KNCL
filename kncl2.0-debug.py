@@ -112,8 +112,6 @@ def findSD(tree, distinct_leaves):
 
     return subtree_roots
 
-
-
 #########################################
 # Global and leaf-based adjustment rates
 #########################################
@@ -306,7 +304,6 @@ def find_optimal_insertion_point(target_tree, subtree_root, ncl_list, leaf_based
                 best_x = x_test
 
     return best_edge, best_x, best_obj
-
 
 def insert_subtree_at_point(target_tree, edge, x_opt, subtree_root):
     """
