@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+# Debug version
 """
 k-Nearest Common Leaves (k-NCL) Tree Completion Algorithm
 
@@ -6,8 +6,6 @@ This script implements the k-NCL algorithm for completing phylogenetic trees
 that are defined on different but overlapping taxon sets. The implementation
 uses the ete3 library to work with phylogenetic trees.
 """
-
-# Debug version
 
 from ete3 import Tree
 
@@ -117,7 +115,7 @@ def findSD(tree, distinct_leaves):
 #########################################
 def compute_global_adjustment_rate(T1, T2, common_leaves, debug_label="T1->T2"):
     """
-    Compute the global adjustment rate r(T1, T2) as the ratio of the cumulative 
+    Compute the global adjustment rate r(T1, T2) as the ratio of the cumulative
     pairwise distances between all common leaves in T1 and T2.
     """
     check_leaves_in_tree(T1, common_leaves, f"T1 ({debug_label})")
@@ -156,7 +154,7 @@ def compute_leaf_based_adjustment_rate(T_target, T_source, leaf_c, common_leaves
         if not target_nodes or not source_nodes:
             print(f"[INFO] Skipping {other_leaf} in leaf-based rate: not found in both trees.")
             continue
-        
+
         d1 = T_target.get_distance(leaf_c, target_nodes[0])
         d2 = T_source.get_distance(leaf_c, source_nodes[0])
         numerator += d1
@@ -192,7 +190,7 @@ def get_k_nearest_common_leaves(T, subtree_root, common_leaves, k):
         d_val = T.get_distance(subtree_root, l)
         dist_list.append((l, d_val))
     dist_list.sort(key=lambda x: x[1])
-    
+
     if not dist_list:
         return []
 
@@ -215,82 +213,74 @@ def get_k_nearest_common_leaves(T, subtree_root, common_leaves, k):
 ###################################################
 # Minimizing the objective function for insertion
 ###################################################
-def find_optimal_insertion_point(target_tree, subtree_root, ncl_list, leaf_based_d_p):
+
+def find_optimal_insertion_point(target_tree, subtree_root, ncl_list, leaf_based_d_p, target_distinct):
     """
-    For each branch in target_tree (parameterized by x in [0,1)), compute the
-    observed distances from each common leaf l_c to candidate insertion point v(x) and
-    then evaluate the quadratic objective function:
-      OF(x) = sum_{l_c in NCL} (d^(T'_target)(l_c, v(x)) - d_p(l_c, subtree_root))^2.
-      
-    Returns:
-      best_edge: the edge (parent, child) where insertion minimizes OF(x),
-      best_x: the optimal x value on that edge,
-      best_obj: the best objective function value.
+    For each branch in target_tree (parameterized by x in [0,1)), this function computes
+    an observed distance for each common leaf in ncl_list and evaluates the quadratic objective:
+    
+      OF(x) = sum_{l_c in ncl_list} (d(l_c, v(x)) - d_p(l_c, subtree_root))^2.
+    
+    Returns a tuple: (best_edge, best_x, best_obj)
     """
     best_edge = None
     best_x = 0.0
     best_obj = float('inf')
-    
-    # Minimum allowed retained length on a terminal branch (if child is a leaf)
-    MIN_TERMINAL_LENGTH = 1e-3  
-    
-    # Ensure every node has a unique name in the tree
+    MIN_TERMINAL_LENGTH = 1e-3
+
+    # Ensure unique names for consistent matching.
     for node in target_tree.traverse("postorder"):
         if not node.name:
             node.name = f"AUTO_{id(node)}"
     
-    # Iterate over each edge (child node and its parent)
     for node in target_tree.traverse("postorder"):
         if node.up is None:
-            continue  # skip the root
-        parent = node.up
-
-        # Skip if either node is from a previously inserted subtree
-        if getattr(node, "isInserted", False) or getattr(parent, "isInserted", False):
-            print(f"[DEBUG] Skipping edge due to prior insertion: ({parent.name} -> {node.name})")
+            continue  # Skip root
+        
+        # Exclude candidate edges whose descendant leaves intersect with target_distinct.
+        descendant_leaves = set(node.get_leaf_names())
+        if descendant_leaves.intersection(target_distinct):
+            # Skip this candidate edge.
             continue
 
-        # Re-fetch parent by name from target_tree to ensure it is from the target tree
+        # Also skip if the node or its parent has been used for a previous insertion.
+        if getattr(node, "usedInsertion", False) or getattr(node.up, "usedInsertion", False):
+            continue
+
+        parent = node.up
         parent_candidates = target_tree.search_nodes(name=parent.name)
         if not parent_candidates:
             continue
         parent_in_target = parent_candidates[0]
-
         edge_length = node.dist
         if edge_length < 1e-15:
             continue
-        
+
         A_vals = []
         sum_diff = 0.0
-        
-        # Gather observed distances for each common leaf in ncl_list
         for l_c in ncl_list:
             target_nodes = target_tree.search_nodes(name=l_c)
             if not target_nodes:
-                print(f"[WARNING] Common leaf '{l_c}' not found in target_tree. Skipping in objective.")
+                print(f"[DEBUG] Common leaf '{l_c}' not in target tree; skipping.")
                 continue
             dist_parent_lc = target_tree.get_distance(parent_in_target, target_nodes[0])
             T_val = leaf_based_d_p.get(l_c, 0.0)
             A_vals.append((dist_parent_lc, T_val))
             sum_diff += (T_val - dist_parent_lc)
-        
+
         if not A_vals:
             continue
-        
-        # Compute candidate x_opt from the linear approximation.
-        x_opt = sum_diff / (edge_length * len(A_vals)) # Derived from setting d(OF)/dx = 0
-        # Two ways: always keep x >= 0, but if the candidate edge is terminal, 
-        # ensure that the remaining portion is at least MIN_TERMINAL_LENGTH.
+
+        # Compute candidate x_opt from the derivative zero condition.
+        x_opt = sum_diff / (edge_length * len(A_vals))
         if node.is_leaf():
             if edge_length < MIN_TERMINAL_LENGTH:
-                continue  # Skip candidate if the branch is too short already.
+                continue
             x_max = 1 - (MIN_TERMINAL_LENGTH / edge_length)
-            # x_max is guaranteed to be < 1; now clamp x_opt accordingly.
             x_clamped = max(0.0, min(x_opt, x_max))
         else:
             x_clamped = max(0.0, min(x_opt, 1.0))
-        
-        # Evaluate the objective function at candidate points 0 and the clamped x value.
+
         for x_test in [0.0, x_clamped]:
             of_val = 0.0
             for (A, T_val) in A_vals:
@@ -301,16 +291,16 @@ def find_optimal_insertion_point(target_tree, subtree_root, ncl_list, leaf_based
                 best_edge = (parent_in_target, node)
                 best_x = x_test
 
+        if best_edge is not None:
+            print(f"[DEBUG] Candidate edge: Parent({parent_in_target.name}) -> Child({node.name}), "
+                  f"edge_length={edge_length:.4f}, best_x={best_x:.4f}, OF={best_obj:.6f}")
     return best_edge, best_x, best_obj
 
 def insert_subtree_at_point(target_tree, edge, x_opt, subtree_root):
     """
     Inserts 'subtree_root' into 'target_tree' at the candidate point along the edge
-    defined by (parent, child) using the optimal x value. Instead of calling
-    parent.remove_child(child) directly (which may fail if the child object differs),
-    we first search for the appropriate child to remove.
-    Importantly, we set the connection branch length to the stored (and scaled) 
-    original root branch length of the subtree.
+    defined by (parent, child) using the optimal x value. This version safely handles
+    replacement of the original edge to avoid leaf duplication bugs.
     """
     parent, child = edge
     original_len = child.dist
@@ -325,34 +315,38 @@ def insert_subtree_at_point(target_tree, edge, x_opt, subtree_root):
         parent.add_child(subtree_root)
         return
 
-    # Create a new internal node to split the branch.
+    # Create a new internal node to split the branch
     new_node = Tree()
     new_node.dist = dist_to_new
 
-    # Instead of direct remove_child, search for the child by identity or unique name.
-    removed = False
-    for c in parent.children:
-        if c is child or (c.name and child.name and c.name == child.name):
-            parent.children.remove(c)
-            removed = True
-            break
-
-    if not removed:
-        print("[WARNING] Child not found in parent's children; attaching subtree directly to the parent.")
+    # Attempt to remove the child safely based on name match
+    matching_children = [c for c in parent.children if c.name == child.name]
+    if matching_children:
+        for c in matching_children:
+            parent.remove_child(c)
+    else:
+        print(f"[WARNING] Could not find exact child to remove: {child.name}")
+        # Still add subtree directly to parent if removal fails
         parent.add_child(subtree_root)
         return
 
+    # Proceed with edge splitting and insertion
     parent.add_child(new_node)
 
-    # Adjust the branch length for the child and attach it to new_node.
+    # Reattach original child with adjusted branch length
     child.dist = dist_to_child
     new_node.add_child(child)
 
-    # Retrieve the stored connection length from the subtree (if available).
+    # Attach the subtree
     connection_length = getattr(subtree_root, "original_root_branch_length", 0.0)
-    # Set the subtree's branch length to the preserved connection length.
     subtree_root.dist = connection_length
     new_node.add_child(subtree_root)
+
+    # Optional sanity check
+    leaves = target_tree.get_leaf_names()
+    dupes = [l for l in set(leaves) if leaves.count(l) > 1]
+    if dupes:
+        print(f"[DUPLICATE ALERT] Duplicated leaves after insertion: {dupes}")
 
 def remove_internal_node_names(tree):
     """
@@ -363,9 +357,9 @@ def remove_internal_node_names(tree):
             node.name = ""
 
 ########################################
-# Main k-NCL function
+# Main k-NCL function (with debug prints)
 ########################################
-def kNCL(T1_original, T2_original, k):
+def kNCL(T1_original, T2_original, k=None):
     """
     Main function for k-Nearest Common Leaves tree completion.
 
@@ -393,6 +387,10 @@ def kNCL(T1_original, T2_original, k):
     if len(CL) < 2:
         raise ValueError("Need at least two common leaves to proceed.")
 
+    # Set default k as the number of common leaves if not specified
+    if k is None:
+        k = len(CL)
+
     # 2) Identify distinct leaves in each tree.
     DL1 = find_distinct_leaves(T1, CL)
     DL2 = find_distinct_leaves(T2, CL)
@@ -412,9 +410,9 @@ def kNCL(T1_original, T2_original, k):
     # 4) Compute global adjustment rates.
     r12 = compute_global_adjustment_rate(T1, T2, CL, debug_label="T1->T2")
     r21 = compute_global_adjustment_rate(T2, T1, CL, debug_label="T2->T1")
-    print(f"[DEBUG] Global adjustment rate r(T1->T2): {r12}")
-    print(f"[DEBUG] Global adjustment rate r(T2->T1): {r21}")
-
+    #print(f"[DEBUG] Global adjustment rate r(T1->T2): {r12}")
+    #print(f"[DEBUG] Global adjustment rate r(T2->T1): {r21}")
+    
     def insert_subtrees_into_target(target_tree, source_tree, subtree_roots, global_rate, label, CL):
         for root_s in subtree_roots:
             original_root_branch = root_s.dist if root_s.up is not None else 0.0
@@ -422,8 +420,8 @@ def kNCL(T1_original, T2_original, k):
             subtree_copy.add_feature("original_root_branch_length", original_root_branch * global_rate)
             scale_subtree(subtree_copy, global_rate)
             print(f"\n[DEBUG] Inserting subtree (root: {root_s.name}) into {label}")
-            print(f"  - Original root branch length: {original_root_branch}")
-            print(f"  - Scaled root branch length: {subtree_copy.original_root_branch_length}")
+            #print(f"  - Original root branch length: {original_root_branch}")
+            #print(f"  - Scaled root branch length: {subtree_copy.original_root_branch_length}")
 
             max_k = len(CL)
             k_current = min(k, max_k)
@@ -431,7 +429,7 @@ def kNCL(T1_original, T2_original, k):
 
             while k_current <= max_k:
                 ncl = get_k_nearest_common_leaves(source_tree, root_s, CL, k_current)
-                print(f"  - k-Nearest common leaves (k={k_current}): {ncl}")
+                #print(f"  - k-Nearest common leaves (k={k_current}): {ncl}")
 
                 if not ncl:
                     print(f"  - No common leaves found for k={k_current}, skipping insertion.")
@@ -443,9 +441,13 @@ def kNCL(T1_original, T2_original, k):
                     dist_source = source_tree.get_distance(l_c, root_s) if source_tree.search_nodes(name=l_c) else 0.0
                     d_p_val = dist_source * r_lc
                     leaf_based_d_p[l_c] = d_p_val
-                    print(f"    - Leaf: {l_c}, Dist(source): {dist_source:.4f}, r^(l_c): {r_lc:.4f}, d_p: {d_p_val:.4f}")
+                    #print(f"    - Leaf: {l_c}, Dist(source): {dist_source:.4f}, r^(l_c): {r_lc:.4f}, d_p: {d_p_val:.4f}")
 
-                edge, x_opt, best_obj = find_optimal_insertion_point(target_tree, root_s, ncl, leaf_based_d_p)
+                target_distinct = find_distinct_leaves(target_tree, CL)
+                edge, x_opt, best_obj = find_optimal_insertion_point(target_tree, root_s, ncl, leaf_based_d_p, target_distinct)
+
+
+                #edge, x_opt, best_obj = find_optimal_insertion_point(target_tree, root_s, ncl, leaf_based_d_p)
 
                 if edge is not None:
                     unique_insertion_found = True
@@ -458,7 +460,7 @@ def kNCL(T1_original, T2_original, k):
                 print("  - Insertion ambiguous or failed after retries, attaching at root.")
                 target_tree.add_child(subtree_copy)
             else:
-                print(f"  - Inserting at edge: ({edge[0].name}, {edge[1].name}), x_opt: {x_opt:.4f}, ObjVal: {best_obj:.6f}")
+                #print(f"  - Inserting at edge: ({edge[0].name}, {edge[1].name}), x_opt: {x_opt:.4f}, ObjVal: {best_obj:.6f}")
                 insert_subtree_at_point(target_tree, edge, x_opt, subtree_copy)
 
             # Mark all nodes in the inserted subtree so they are not reused
@@ -469,7 +471,7 @@ def kNCL(T1_original, T2_original, k):
             ensure_unique_internal_node_names(target_tree, prefix="TINS")
 
         return target_tree
-
+    
     # 5) Insert subtrees from T2 into T1
     print("\n[DEBUG] Inserting T2 subtrees into T1")
     T1_completed = insert_subtrees_into_target(T1, T2, SD2, r12, label="T1", CL=CL)
@@ -481,6 +483,35 @@ def kNCL(T1_original, T2_original, k):
     # 7) Clean final trees
     remove_internal_node_names(T1_completed)
     remove_internal_node_names(T2_completed)
+
+    # 8) Final validation: Confirm both trees have the same leaf set and match the union of L(T1) and L(T2)
+    final_leaves_T1 = set(T1_completed.get_leaf_names())
+    final_leaves_T2 = set(T2_completed.get_leaf_names())
+    original_union = set(T1_original.get_leaf_names()) | set(T2_original.get_leaf_names())
+
+    print("\n[VALIDATION] Final leaf count check:")
+    print(f"  - L(T1) = {len(T1_original.get_leaf_names())}")
+    print(f"  - L(T2) = {len(T2_original.get_leaf_names())}")
+    print(f"  - L(T1) ∪ L(T2) = {len(original_union)}")
+    print(f"  - Leaves in completed T1 = {len(final_leaves_T1)}")
+    print(f"  - Leaves in completed T2 = {len(final_leaves_T2)}")
+
+    if final_leaves_T1 == final_leaves_T2 == original_union:
+        print("[SUCCESS] Completed trees have consistent and complete leaf sets.")
+    else:
+        print("[ERROR] Leaf sets in completed trees do not match L(T1) ∪ L(T2)!")
+        missing_T1 = original_union - final_leaves_T1
+        missing_T2 = original_union - final_leaves_T2
+        extra_T1 = final_leaves_T1 - original_union
+        extra_T2 = final_leaves_T2 - original_union
+        if missing_T1:
+            print(f"  - Missing in T1+: {sorted(missing_T1)}")
+        if missing_T2:
+            print(f"  - Missing in T2+: {sorted(missing_T2)}")
+        if extra_T1:
+            print(f"  - Extra in T1+: {sorted(extra_T1)}")
+        if extra_T2:
+            print(f"  - Extra in T2+: {sorted(extra_T2)}")
 
     print("[DEBUG] Tree completion finished\n")
     return T1_completed, T2_completed
