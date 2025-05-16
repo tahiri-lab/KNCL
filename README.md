@@ -1,5 +1,5 @@
-# K-NCL
-**k-Nearest Common Leaves: phylogenetic tree completion and distance calculation**
+# *k*-NCL
+***k*-Nearest Common Leaves: overlapping phylogenetic tree completion**
 
 > The results of this work will be submitted.
 >
@@ -13,7 +13,7 @@
 >Please note that `kncl.py` is an active work in progress. Development is ongoing to improve its efficiency and extend its functionality to cover a wider range of use cases and tree types (rooted and unrooted).
 
   - Biologically meaningful datasets of partially overlapping phylogenetic trees with branch lengths are available [here](https://github.com/tahiri-lab/KNCL/tree/main/data/).
-  - Biological datasets used in the evaluation part of the k-NCL algorithm are located [here](https://github.com/tahiri-lab/KNCL/tree/main/data/evaluation_datasets).
+  - Biological datasets used in the evaluation part of the *k*-NCL algorithm are located [here](https://github.com/tahiri-lab/KNCL/tree/main/data/evaluation_datasets).
   - The data construction pipeline is available [here](https://github.com/tahiri-lab/KNCL/tree/main/data/data-pipeline).
 
 #### Requirements :clipboard:
@@ -54,8 +54,6 @@ The `output.txt` file will contain:
 - Ensure the input Newick file is correctly formatted.
 
 The description of the *k*-Nearest Common Leaves algorithm can be found [here](https://github.com/tahiri-lab/KNCL/blob/main/algorithm.md).
-
-Debugging of the updated version of the *k*-NCL algorithm is in progress.
 
 # 📧 Contact
 Please email us at: <Nadia.Tahiri@USherbrooke.ca> for any questions or feedback.
