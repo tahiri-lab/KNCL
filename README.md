@@ -10,7 +10,7 @@
 
 >:pushpin: **Current Status**
 >
->Please note that the current version of `kncl.py` is under development. It is not a final version and requires further improvements and testing to ensure robustness and accuracy in various use cases.
+>Please note that `kncl.py` is an active work in progress. Development is ongoing to improve its efficiency and extend its functionality to cover a wider range of use cases and tree types (rooted and unrooted).
 
   - Biologically meaningful datasets of partially overlapping phylogenetic trees with branch lengths are available [here](https://github.com/tahiri-lab/KNCL/tree/main/data/).
 
