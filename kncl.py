@@ -1,466 +1,370 @@
-# Please note that this version is not final and is under development
+#!/usr/bin/env python3
+
+"""
+This script implements the k-NCL algorithm for completing phylogenetic trees
+that are defined on different but overlapping taxon sets.
+
+Author: Aleksandr Koshkarov
+
+Version: May 2025
+
+Usage:
+    python kncl.py -i input.newick <k> -o output.txt
+
+Requires:
+    - ete3 (pip install ete3)
+    
+"""
 
 import argparse
+from functools import lru_cache
+from math import floor, log2
 from ete3 import Tree
-import math
-from itertools import combinations
 
-# Helper functions
-def precompute_descendants(node, distinct_leaves):
-    if node.is_leaf():
-        node.add_feature("descendants_distinct", node.name in distinct_leaves)
-    else:
-        all_distinct = True
-        for child in node.children:
-            if not child.descendants_distinct:
-                all_distinct = False
-                break
-        node.add_feature("descendants_distinct", all_distinct)
 
-def findSD(tree, distinct_leaves):
+# ──────────────────────────────────────────────────────────────────────
+#  Helper functions
+# ──────────────────────────────────────────────────────────────────────
+def _refresh_name_cache(tree: Tree):
+    tree._nmap = {n.name: n for n in tree.traverse() if n.name}
+
+
+def ensure_unique_internal_node_names(tree: Tree, prefix="IN"):
+    counter = 1
     for node in tree.traverse("postorder"):
-        precompute_descendants(node, distinct_leaves)
+        if not node.is_leaf() and (not node.name or node.name.startswith(prefix)):
+            node.name = f"{prefix}_{counter}"
+            counter += 1
+    _refresh_name_cache(tree)
 
-    subtree_roots = set()
-    visited_leaves = set()
 
-    for leaf_name in distinct_leaves:
-        if leaf_name in visited_leaves:
+def find_common_leaves(T1: Tree, T2: Tree):
+    return set(T1.get_leaf_names()).intersection(T2.get_leaf_names())
+
+
+def find_distinct_leaves(T: Tree, common):
+    return set(T.get_leaf_names()) - common
+    
+# ──────────────────────────────────────────────────────────────────────
+# File IO Helpers
+# ──────────────────────────────────────────────────────────────────────
+def parse_input_file(filename):
+    with open(filename, 'r') as f:
+        return [Tree(line.strip(), format=1) for line in f if line.strip()]
+
+
+def write_output_file(filename, results):
+    with open(filename, 'w') as f:
+        for entry in results:
+            f.write(entry + "\n\n")
+
+
+# ──────────────────────────────────────────────────────────────────────
+#  ONE pass FindSD
+# ──────────────────────────────────────────────────────────────────────
+def findSD(tree: Tree, dl_set):
+    for n in tree.traverse("postorder"):
+        if n.is_leaf():
+            n.allDistinct = (n.name in dl_set)
+        else:
+            n.allDistinct = all(ch.allDistinct for ch in n.children)
+    return [n for n in tree.traverse("postorder")
+            if n.allDistinct and (n.up is None or not n.up.allDistinct)]
+
+
+# ──────────────────────────────────────────────────────────────────────
+#  Depth & LCA oracle
+# ──────────────────────────────────────────────────────────────────────
+class DistOracle:
+    __slots__ = ("dist_to_root", "_euler", "_depth", "_first",
+                 "_st", "_log2", "_dist_cached")
+
+    # ------------------------------------------------------------
+    def __init__(self, tree: Tree, cache_size: int = 20_000):
+        self.dist_to_root = {}
+        self._annotate_depth(tree)
+        self._build_lca_struct(tree)
+
+        # build a per-instance, bounded cache
+        @lru_cache(maxsize=cache_size)
+        def _dist_cached(a, b):
+            lca = self._lca(a, b)
+            return (self.dist_to_root[a] +
+                    self.dist_to_root[b] -
+                    2 * self.dist_to_root[lca])
+
+        self._dist_cached = _dist_cached  
+
+    
+    def dist(self, a, b):
+        return self._dist_cached(a, b)
+
+
+    def _annotate_depth(self, tree):
+        for n in tree.traverse("preorder"):
+            self.dist_to_root[n] = (0.0 if n.up is None
+                                    else self.dist_to_root[n.up] + n.dist)
+
+    def _build_lca_struct(self, tree):
+        euler, depth, first = [], [], {}
+
+        def dfs(v, d):
+            first.setdefault(v, len(euler))
+            euler.append(v); depth.append(d)
+            for ch in v.children:
+                dfs(ch, d + 1)
+                euler.append(v); depth.append(d)
+
+        dfs(tree, 0)
+        self._euler, self._depth, self._first = euler, depth, first
+
+        m = len(euler)
+        kmax = floor(log2(m)) + 1
+        st = [[0] * m for _ in range(kmax)]
+        st[0] = list(range(m))
+        for k in range(1, kmax):
+            half = 1 << (k - 1)
+            for i in range(m - (1 << k) + 1):
+                a = st[k - 1][i]
+                b = st[k - 1][i + half]
+                st[k][i] = a if depth[a] < depth[b] else b
+        self._st = st
+        self._log2 = [0] * (m + 1)
+        for i in range(2, m + 1):
+            self._log2[i] = self._log2[i >> 1] + 1
+
+    def _lca(self, a, b):
+        ia, ib = self._first[a], self._first[b]
+        if ia > ib:
+            ia, ib = ib, ia
+        span = ib - ia + 1
+        k = self._log2[span]
+        left = self._st[k][ia]
+        right = self._st[k][ib - (1 << k) + 1]
+        return (self._euler[left] if self._depth[left] < self._depth[right]
+                else self._euler[right])
+
+   
+    def dist_leaf_to_node(self, leaf, node):
+        return self.dist(leaf, node)
+
+
+# ──────────────────────────────────────────────────────────────────────
+#  Adjustment rate functions
+# ──────────────────────────────────────────────────────────────────────
+def compute_global_adjustment_rate(T1, T2, common_names, D1, D2):
+    L1 = [T1 & n for n in common_names]
+    L2 = [T2 & n for n in common_names]
+    num = den = 0.0
+    for i in range(len(L1)):
+        for j in range(i + 1, len(L1)):
+            num += D1.dist(L1[i], L1[j])
+            den += D2.dist(L2[i], L2[j])
+    return 1.0 if abs(den) < 1e-15 else num / den
+
+
+def compute_leaf_based_adjustment_rate(Dtgt, Dsrc,
+                                       leaf_tgt, leaf_src,
+                                       common_names, tree_tgt, tree_src):
+    num = den = 0.0
+    for name in common_names:
+        if name == leaf_tgt.name:
+            continue
+        num += Dtgt.dist(leaf_tgt, tree_tgt & name)
+        den += Dsrc.dist(leaf_src, tree_src & name)
+    return 1.0 if abs(den) < 1e-15 else num / den
+
+
+# ──────────────────────────────────────────────────────────────────────
+#  Misc helper functions
+# ──────────────────────────────────────────────────────────────────────
+def scale_subtree(root, factor):
+    for n in root.traverse():
+        n.dist *= factor
+
+
+def get_k_nearest_common_leaves(Dsrc, root, common_names, tree_src, k):
+    pairs = [(name, Dsrc.dist_leaf_to_node(tree_src & name, root))
+             for name in common_names]
+    pairs.sort(key=lambda t: t[1])
+    if not pairs:
+        return []
+    kth = pairs[min(k, len(pairs)) - 1][1]
+    return [n for n, d in pairs if d <= kth + 1e-15]
+
+
+# ──────────────────────────────────────────────────────────────────────
+#  Objective function optimization
+# ──────────────────────────────────────────────────────────────────────
+def find_optimal_insertion_point(target_tree, Dtgt,
+                                 subtree_root, ncl_names, d_p,
+                                 dl_names, min_terminal=1e-3):
+    best_edge, best_x, best_val = None, 0.0, float("inf")
+    dl_names = set(dl_names)
+
+    for ch in target_tree.traverse("postorder"):
+        parent = ch.up
+        if parent is None:
+            continue
+       
+        if getattr(ch, "inInserted", False) and getattr(parent, "inInserted", False):
+            continue
+      
+        if set(ch.get_leaf_names()) & dl_names:
             continue
 
-        leaf_node = tree & leaf_name
-        current_node = leaf_node
-        subtree_root = None
+        e_len = ch.dist
+        if e_len < 1e-15:
+            continue
 
-        while current_node:
-            if current_node.descendants_distinct:
-                subtree_root = current_node
-            current_node = current_node.up
-
-        if subtree_root and subtree_root not in subtree_roots:
-            subtree_roots.add(subtree_root)
-            visited_leaves.update(get_leaves(subtree_root))
-
-    return subtree_roots
-
-def get_leaves(node):
-    return set(leaf.name for leaf in node)
-
-def get_subtree_newick_with_branch_lengths(node):
-    return node.write(format=1)
-
-def InsertTempLeaves(tree, target_leaf, new_leaf_base_name, new_length, dist, inserted_leaves, tolerance=1e-10):
-    # Operate directly on 'tree'
-    target_node = tree.search_nodes(name=target_leaf)[0]
-    insertion_points = []
-    visited_nodes = set()
-
-    # Label internal nodes and branches for easier tracking
-    internal_node_counter = 1
-    for node in tree.traverse("postorder"):
-        if not node.is_leaf() and not node.name:
-            node.name = f"Node{internal_node_counter}"
-            internal_node_counter += 1
-
-    def robust_insert_leaf_at_node(current_node, insert_distance, previous_node, original_branch_distance, toward_root=False):
-        # Swap current_node and previous_node if moving towards the root
-        if toward_root:
-            current_node, previous_node = previous_node, current_node
-            insert_distance = original_branch_distance - insert_distance
-
-        # Calculate distances for the new branches
-        dist_to_parent = insert_distance
-        dist_to_previous_node = original_branch_distance - insert_distance
-
-        if dist_to_parent < 0:
-            dist_to_parent = 0
-        if dist_to_previous_node < 0:
-            dist_to_previous_node = 0
-
-        # Detach previous_node from its parent
-        parent = previous_node.up
-        if parent:
-            parent.remove_child(previous_node)
+        m = len(ncl_names)
+        sum_diff = sum(d_p[n] - Dtgt.dist_leaf_to_node(target_tree & n, parent)
+                       for n in ncl_names)
+        x_opt = sum_diff / (e_len * m)
+        if ch.is_leaf():
+            x_opt = max(0.0, min(x_opt, 1 - min_terminal / e_len))
         else:
-            parent = tree  # previous_node is root
+            x_opt = max(0.0, min(x_opt, 1.0))
 
-        # Create new internal node
-        new_internal_node = parent.add_child(dist=dist_to_parent)
-        new_internal_node.add_child(previous_node, dist=dist_to_previous_node)
+        for x in (x_opt, 0.0):
+            of_val = 0.0
+            for n in ncl_names:
+                obs = Dtgt.dist_leaf_to_node(target_tree & n, parent) + x * e_len
+                diff = obs - d_p[n]
+                of_val += diff * diff
+            if of_val < best_val - 1e-12:
+                best_val, best_edge, best_x = of_val, (parent, ch), x
 
-        # Add temporary leaf
-        new_leaf_name = f"{target_leaf}_{new_leaf_base_name}{len(insertion_points) + 1}"
-        new_internal_node.add_child(name=new_leaf_name, dist=new_length)
-        insertion_points.append(new_leaf_name)
-        visited_nodes.add(new_internal_node)
+    return best_edge, best_x, best_val
 
-        return True
 
-    def insert_leaf_at_terminal(current_node, insert_distance):
-        if current_node.name in inserted_leaves:
-            return False
-        excess_length = current_node.dist - insert_distance
-        if excess_length < 0:
-            excess_length = 0
+def insert_subtree_at_point(target_tree, edge, x_opt, subtree_copy):
+    parent, child = edge
+    orig_len = child.dist
+    d_up = x_opt * orig_len
+    d_down = (1 - x_opt) * orig_len
 
-        parent = current_node.up
-        if parent:
-            current_node.detach()
-            new_internal_node = parent.add_child(dist=excess_length)
-            new_internal_node.add_child(current_node, dist=insert_distance)
-            new_leaf_name = f"{target_leaf}_{new_leaf_base_name}{len(insertion_points) + 1}"
-            new_internal_node.add_child(name=new_leaf_name, dist=new_length)
-            insertion_points.append(new_leaf_name)
-            visited_nodes.add(new_internal_node)
-        else:
-            return False
-
-        return True
-
-    def bfs(node, accumulated_distance):
-        queue = [(node, accumulated_distance, None, 0, [], False)]
-        while queue:
-            current_node, current_dist, prev_node, prev_dist, path, toward_root = queue.pop(0)
-            if current_node in visited_nodes or 'temp' in current_node.name or current_node.name in inserted_leaves:
-                continue
-            visited_nodes.add(current_node)
-            current_path = path + [current_node.name]
-
-            if round(current_dist, 8) >= dist:
-                insert_distance = round(current_dist, 8) - round(dist, 8)
-                if abs(insert_distance) < tolerance:
-                    insert_distance = 0
-                if insert_distance == 0:
-                    if not robust_insert_leaf_at_node(current_node, insert_distance, prev_node, current_node.dist, toward_root):
-                        return
-                elif current_node.is_leaf():
-                    if not insert_leaf_at_terminal(current_node, insert_distance):
-                        return
-                else:
-                    if not robust_insert_leaf_at_node(prev_node, prev_dist - insert_distance, current_node, prev_dist, toward_root):
-                        return
-                continue
-
-            for child in current_node.children:
-                if child not in visited_nodes and child.name not in inserted_leaves:
-                    queue.append((child, current_dist + child.dist, current_node, child.dist, current_path, False))
-
-            if current_node.up and current_node.up not in visited_nodes and current_node.up.name not in inserted_leaves:
-                queue.append((current_node.up, current_dist + current_node.dist, current_node, current_node.dist, current_path, True))
-
-    if dist <= target_node.dist:
-        insert_leaf_at_terminal(target_node, dist)
+    if x_opt < 1e-15:
+        parent.add_child(subtree_copy)
     else:
-        bfs(target_node, 0)
+        mid = Tree()
+        mid.dist = d_up
+        parent.remove_child(child)
+        parent.add_child(mid)
+        child.dist = d_down
+        mid.add_child(child)
+        mid.add_child(subtree_copy)
+        mid.add_feature("inInserted", True)
 
-    return insertion_points  # Return names instead of node objects
+    _refresh_name_cache(target_tree)
 
-def find_farthest_leaf(tree, start, temporary_leaves):
-    max_distance = 0
-    farthest_leaf = start
-    for leaf_name in temporary_leaves:
-        if leaf_name != start.name:
-            leaf = tree & leaf_name
-            distance = tree.get_distance(start, leaf)
-            if distance > max_distance:
-                max_distance = distance
-                farthest_leaf = leaf
-    return farthest_leaf, max_distance
+# ──────────────────────────────────────────────────────────────────────
+#  Main k-NCL
+# ──────────────────────────────────────────────────────────────────────
+def kNCL(T1_raw: Tree, T2_raw: Tree, k=None):
+    """Return (completed_T1, completed_T2)."""
+    T1, T2 = T1_raw.copy(), T2_raw.copy()
+    ensure_unique_internal_node_names(T1, "T1IN")
+    ensure_unique_internal_node_names(T2, "T2IN")
 
-def find_path(leaf1, leaf2):
-    path1 = []
-    node = leaf1
-    while node:
-        path1.append(node)
-        node = node.up
+    common = find_common_leaves(T1, T2)
+    if len(common) < 2:
+        raise ValueError("Need at least two common leaves")
+    if k is None:
+        k = len(common)
+    if k < 2:
+        raise ValueError("k must be ≥2")
 
-    path2 = []
-    node = leaf2
-    while node:
-        path2.append(node)
-        node = node.up
+    DL1, DL2 = find_distinct_leaves(T1, common), find_distinct_leaves(T2, common)
+    SD1, SD2 = findSD(T1, DL1), findSD(T2, DL2)
 
-    lca = None
-    for n1 in path1:
-        if n1 in path2:
-            lca = n1
-            break
+    D1, D2 = DistOracle(T1), DistOracle(T2)
+    r12 = compute_global_adjustment_rate(T1, T2, common, D1, D2)
+    r21 = compute_global_adjustment_rate(T2, T1, common, D2, D1)
 
-    path = []
-    branch_lengths = []
-    for node in path1:
-        path.append(node)
-        if node == lca:
-            break
+    def _insert_all(target_tree, source_tree, subtrees,
+                    global_r, Dtgt, Dsrc, dl_target):
+        for S in subtrees:
+            # copy, scale & tag
+            S_copy = S.copy()
+            scale_subtree(S_copy, global_r)
+            for n in S_copy.traverse():
+                n.add_feature("inInserted", True)
 
-    lca_index = path2.index(lca)
-    reversed_path2 = list(reversed(path2[:lca_index]))
-    path.extend(reversed_path2)
-
-    for i in range(1, len(path)):
-        branch_lengths.append(path[i - 1].get_distance(path[i]))
-
-    return path, branch_lengths
-
-def compute_midpoint(tree, temporary_leaves):
-    start_name = next(iter(temporary_leaves))
-    start = tree & start_name
-    leaf1, dist1 = find_farthest_leaf(tree, start, temporary_leaves)
-    leaf2, dist2 = find_farthest_leaf(tree, leaf1, temporary_leaves)
-    path, branch_lengths = find_path(leaf1, leaf2)
-    total_distance = dist2
-    half_distance = round(total_distance / 2, 8)
-
-    cumulative_distance = 0
-    prev_node = None
-    for i, node in enumerate(path):
-        if i > 0:
-            cumulative_distance += round(branch_lengths[i - 1], 8)
-        if cumulative_distance >= half_distance:
-            excess = round(cumulative_distance - half_distance, 8)
-            prev_node = path[i - 1]
-            return prev_node, node, excess, half_distance, branch_lengths[i - 1]
-        elif cumulative_distance == half_distance:
-            prev_node = path[i - 1]
-            return prev_node, node, 0, half_distance, branch_lengths[i - 1]
-
-def insert_midpoint_and_new_subtree(tree, prev_node, curr_node, excess, subtree, branch_length, original_dist):
-    if excess == 0:
-        # Attach the subtree directly to curr_node
-        new_subtree = subtree.copy()
-        new_subtree.dist = branch_length
-        curr_node.add_child(new_subtree)
-        return tree
-
-    if curr_node in prev_node.get_ancestors():
-        distance_to_midpoint = round(excess, 8)
-        distance_from_midpoint_to_leaf = round(original_dist - excess, 8)
-    else:
-        distance_to_midpoint = round(original_dist - excess, 8)
-        distance_from_midpoint_to_leaf = round(excess, 8)
-
-    if distance_to_midpoint < 0 or distance_from_midpoint_to_leaf < 0:
-        raise ValueError("Negative distance encountered. Check the calculation logic.")
-
-    new_node = Tree()
-    new_node.dist = distance_to_midpoint
-
-    if curr_node in prev_node.get_ancestors():
-        parent = prev_node.up
-        child = prev_node
-    else:
-        parent = prev_node
-        child = curr_node
-
-    parent.remove_child(child)
-    parent.add_child(new_node)
-    new_node.add_child(child)
-    child.dist = distance_from_midpoint_to_leaf
-
-    # Now add the subtree
-    new_subtree = subtree.copy()
-    new_subtree.dist = branch_length
-    new_node.add_child(new_subtree)
-
-    return tree
-
-def remove_temporary_leaves(tree, temporary_leaves):
-    def collapse_single_child_nodes(node):
-        while not node.is_leaf() and len(node.children) == 1:
-            child = node.children[0]
-            child.dist += node.dist
-            parent = node.up
-            if parent:
-                parent.remove_child(node)
-                parent.add_child(child)
-                node = parent
-            else:
-                # Node is root
-                child.up = None
-                tree = child  # Update tree reference
-                node = child
-    for leaf_name in temporary_leaves:
-        leaf_nodes = tree.search_nodes(name=leaf_name)
-        if leaf_nodes:
-            leaf = leaf_nodes[0]
-            parent = leaf.up
-            if parent:
-                parent.remove_child(leaf)
-                collapse_single_child_nodes(parent)
-            else:
-                # Leaf is root
-                tree = None
-    return tree  # Return the possibly updated tree
-
-def clear_internal_node_names(tree):
-    for node in tree.traverse():
-        if not node.is_leaf():
-            node.name = ''
-
-def kNCL(T1, T2, k):
-    CL = set(T1.get_leaf_names()) & set(T2.get_leaf_names())
-    if len(CL) < 3:
-        raise ValueError("The input trees must have at least 3 common leaves.")
-    if k < 2 or k > len(CL):
-        raise ValueError("The value of k must be between 2 and the number of common leaves.")
-
-    def adjust_rate(T1, T2):
-        sum_T1 = sum(T1.get_distance(l1, l2) for i, l1 in enumerate(CL) for l2 in list(CL)[i + 1:])
-        sum_T2 = sum(T2.get_distance(l1, l2) for i, l1 in enumerate(CL) for l2 in list(CL)[i + 1:])
-        return sum_T1 / sum_T2 if sum_T2 else 1
-
-    r12 = adjust_rate(T1, T2)  # Adjusting from T2 to T1
-    r21 = adjust_rate(T2, T1)  # Adjusting from T1 to T2
-
-    SD1 = findSD(T1, set(T1.get_leaf_names()) - CL)
-    SD2 = findSD(T2, set(T2.get_leaf_names()) - CL)
-
-    inserted_leaves = set()  # Track inserted leaves to ignore them in future iterations
-
-    def process_tree(target_tree, source_tree, subtrees_to_insert, rate, k):
-        for a in subtrees_to_insert:
-            if not a.name:
-                a.name = "subtree_" + str(len(subtrees_to_insert))  # Assign a name to unnamed subtrees
-
-            # Make a copy of the subtree to avoid modifying the original
-            adjusted_subtree = a.copy()
-
-            # Adjust all branch lengths in the copied subtree
-            for node in adjusted_subtree.traverse():
-                node.dist *= rate
-
-            NCL = sorted(CL, key=lambda l: source_tree.get_distance(a, source_tree & l))[:k]
-            TL = set()
-            for lc in NCL:
-                if target_tree.search_nodes(name=lc):
-                    lc_node = target_tree & lc
-                else:
-                    raise ValueError(f"Common leaf '{lc}' not found in target_tree.")
-                lc_node_source = source_tree & lc
-                rc = sum(target_tree.get_distance(lc_node, l) for l in CL) / sum(source_tree.get_distance(lc_node_source, l) for l in CL)
-                dp = (source_tree.get_distance(a, lc_node_source) - a.dist) * rc
-                temp_leaves = InsertTempLeaves(target_tree, lc, "temp", adjusted_subtree.dist, dp, inserted_leaves)
-                TL.update(temp_leaves)
-                inserted_leaves.update(temp_leaves)  # Add the inserted leaves to the set
-
-
-            if not TL:
+            ncl = get_k_nearest_common_leaves(Dsrc, S, common, source_tree, k)
+            if not ncl:
                 continue
 
-            if len(TL) == 1:
-                single_leaf_name = next(iter(TL))
-                single_leaf = target_tree & single_leaf_name
-                parent = single_leaf.up
-                branch_length = single_leaf.dist
+            d_p = {}
+            for name in ncl:
+                leaf_src = source_tree & name
+                leaf_tgt = target_tree & name
+                r_lc = compute_leaf_based_adjustment_rate(
+                    Dtgt, Dsrc, leaf_tgt, leaf_src, common, target_tree, source_tree
+                )
+                d_p[name] = Dsrc.dist_leaf_to_node(leaf_src, S) * r_lc
 
-                # Remove the temporary leaf
-                parent.remove_child(single_leaf)
+            edge, x_opt, _ = find_optimal_insertion_point(
+                target_tree, Dtgt, S, ncl, d_p,
+                find_distinct_leaves(target_tree, common)
+            )
+            if edge:
+                insert_subtree_at_point(target_tree, edge, x_opt, S_copy)
+                Dtgt.__init__(target_tree)  # rebuild oracle
 
-                # Attach the adjusted subtree to the parent
-                adjusted_subtree.dist = branch_length
-                parent.add_child(adjusted_subtree)
+            _refresh_name_cache(target_tree)
 
-            else:
-                try:
-                    prev_node, curr_node, excess, _, original_dist = compute_midpoint(target_tree, TL)
-                    target_tree = insert_midpoint_and_new_subtree(target_tree, prev_node, curr_node, excess, adjusted_subtree, adjusted_subtree.dist, original_dist)
-                except Exception as e:
-                    print("Error encountered during midpoint insertion:")
-                    print(f"Nodes involved: {TL}")
-                    print(f"Error: {str(e)}")
+    _insert_all(T1, T2, SD2, r12, D1, D2, DL1)
+    _insert_all(T2, T1, SD1, r21, D2, D1, DL2)
 
-            target_tree = remove_temporary_leaves(target_tree, TL)
-        return target_tree
+    # strip internal names
+    for t in (T1, T2):
+        for n in t.traverse():
+            if not n.is_leaf():
+                n.name = ""
 
-    # Process trees with the corrected adjustment rates
-    T1_completed = process_tree(T1, T2, SD2, r12, k)
-
-    T2_completed = process_tree(T2, T1, SD1, r21, k)
-
-    clear_internal_node_names(T1_completed)
-    clear_internal_node_names(T2_completed)
-
-    return T1_completed, T2_completed
-
-def parse_input_file(input_file):
-    with open(input_file, 'r') as file:
-        tree_lines = file.readlines()
-    trees = [Tree(tree_str.strip(), format=1) for tree_str in tree_lines]
-    return trees
-
-def write_output_file(output_file, results):
-    with open(output_file, 'w') as file:
-        for result in results:
-            file.write(result + '\n')
-
-def squared_distance_sum(t1, t2, leaves):
-    sum_sq_distance = 0
-    for leaf1, leaf2 in combinations(leaves, 2):
-        d1 = t1.get_distance(leaf1, leaf2)
-        d2 = t2.get_distance(leaf1, leaf2)
-        sum_sq_distance += (d1 - d2) ** 2
-    return sum_sq_distance
-
-def BSD(T1, T2, k):
-    # Get the leaves from the original input trees (before completion)
-    leaves1 = set(leaf.name for leaf in T1.get_leaves())
-    leaves2 = set(leaf.name for leaf in T2.get_leaves())
-
-    # Find the common leaves between the two original trees
-    common_leaves = leaves1.intersection(leaves2)
-    if len(common_leaves) < 3:
-        return None, None, None, None
-
-    # Copy trees to avoid in-place modification
-    T1_copy = T1.copy()
-    T2_copy = T2.copy()
+    T1_plus, T2_plus = T1, T2
+    return T1_plus, T2_plus
     
-    # Complete both trees using the k-NCL function
-    T1_completed, T2_completed = kNCL(T1_copy, T2_copy, k)
-
-    # Get the leaves of the completed trees
-    leaves_completed = set(leaf.name for leaf in T1_completed.get_leaves())
-
-    # Calculate BSD(+) over the completed trees and the leafset of T1_completed
-    bsd_plus = math.sqrt(squared_distance_sum(T1_completed, T2_completed, leaves_completed))
-
-    # Calculate BSD(-) over the common leaves of the original trees
-    bsd_minus = math.sqrt(squared_distance_sum(T1, T2, common_leaves))
-
-    # Return BSD distances and the completed trees in Newick format
-    return bsd_plus, bsd_minus, T1_completed.write(format=1), T2_completed.write(format=1)
-
+# ──────────────────────────────────────────────────────────────────────
+# Main CLI logic
+# ──────────────────────────────────────────────────────────────────────
 def main():
     parser = argparse.ArgumentParser(description="Run k-NCL algorithm on Newick trees.")
-    parser.add_argument('-i', '--input', type=str, required=True, help="Input file with trees in Newick format")
-    parser.add_argument('k', type=int, help="Integer value of k for k-NCL algorithm")
-    parser.add_argument('-o', '--output', type=str, required=True, help="Output file to save results")
+    parser.add_argument('-i', '--input', type=str, required=True,
+                        help="Input file with trees in Newick format")
+    parser.add_argument('k', type=int,
+                        help="Integer value of k (2 or greater) for the k-NCL algorithm")
+    parser.add_argument('-o', '--output', type=str, required=True,
+                        help="Output file to save results")
 
     args = parser.parse_args()
 
-    # Parse the input trees
+    # Load and validate input
     trees = parse_input_file(args.input)
     if len(trees) < 2:
         raise ValueError("The input file must contain at least two trees.")
 
-    # Run the k-NCL algorithm and calculate BSD for each pair of trees
+    k = args.k
     results = []
+
     for i in range(len(trees)):
         for j in range(i + 1, len(trees)):
             T1 = trees[i]
             T2 = trees[j]
-            bsd_plus, bsd_minus, T1_completed_newick, T2_completed_newick = BSD(T1, T2, args.k)
-            if bsd_plus is not None and bsd_minus is not None:
+            try:
+                T1_completed, T2_completed = kNCL(T1, T2, k)
                 result = (f"Tree pair {i + 1} and {j + 1}:\n"
-                          f"BSD(+) = {bsd_plus:.4f}, BSD(-) = {bsd_minus:.4f}\n"
-                          f"Completed Tree 1:\n{T1_completed_newick}\n"
-                          f"Completed Tree 2:\n{T2_completed_newick}")
-                results.append(result)
-            else:
-                results.append(f"Tree pair {i + 1} and {j + 1}: Tree completion cannot be performed on these trees. Check their common leaves.")
+                          f"Completed Tree 1:\n{T1_completed.write(format=1).strip()}\n"
+                          f"Completed Tree 2:\n{T2_completed.write(format=1).strip()}")
+            except Exception as e:
+                result = (f"Tree pair {i + 1} and {j + 1}: "
+                          f"Tree completion cannot be performed. Error: {str(e)}")
 
-    # Write the output to a file
+            results.append(result)
+
     write_output_file(args.output, results)
+
 
 if __name__ == "__main__":
     main()
