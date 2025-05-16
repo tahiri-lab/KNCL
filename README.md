@@ -6,7 +6,7 @@
 > Koshkarov, A. & Tahiri, N. (2025). *k*-Nearest Common Leaves algorithm for phylogenetic tree completion (in progress).
 
 #### Description :bookmark_tabs:
-`kncl.py` is a Python script designed to complete 2 phylogenetic trees defined on different but mutually overlapping sets of taxa on the union of their taxa sets and compute the Branch Score Distance (BSD). The BSD is a measure of the dissimilarity between two trees based on their branch lengths (see more details [here](https://www.mdpi.com/2073-8994/16/7/790)). The script processes trees in Newick format by pairwise comparing them. It outputs the completed versions of these trees, their BSD(+) distance, and the BSD(-) distance.
+`kncl.py` is a Python script designed to complete 2 phylogenetic trees defined on different but mutually overlapping sets of taxa on the union of their taxa sets. The script processes trees in Newick format by pairwise comparing them. It outputs the completed versions of these trees.
 
 >:pushpin: **Current Status**
 >
@@ -48,8 +48,6 @@ python3 kncl.py -i example.newick 2 -o output.txt
 
 #### Output :book:
 The `output.txt` file will contain:
-- BSD(+) distances between the completed trees.
-- BSD(-) distances for the pruned trees.
 - Completed versions of each tree pair.
 
 #### Notes :pencil:
