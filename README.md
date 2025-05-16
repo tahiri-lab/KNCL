@@ -29,7 +29,7 @@ pip install ete3
 #### Usage :bulb:
 Run the script using the command:
 ```bash
-python3 kncl.py -i <input.newick> <k> -o <output.txt>
+python kncl.py -i <input.newick> <k> -o <output.txt>
 ```
 - `<input.newick>`: File containing two or more trees in Newick format, each tree on a separate line.
 - `<k>`: Integer value of *k* for the *k*-nearest common leaves algorithm (*k* must be between 2 and the number of common leaves).
@@ -43,7 +43,7 @@ Given an input file `example.newick` with the following content:
 ```
 Run the script as:
 ```bash
-python3 kncl.py -i example.newick 2 -o output.txt
+python kncl.py -i example.newick 2 -o output.txt
 ```
 
 #### Output :book:
