@@ -95,12 +95,22 @@ species_dict = {
 
 species_list = species_dict[species_group]
 
-if len(species_list) < n:
-    print(f"Error: Not enough species in {species_group} to select {n} species.")
+def select_one_per_subgroup(species_list):
+    subgroups = {}
+    for species in species_list:
+        subgroup = species.split()[0]  # Assume the first word represents the subgroup
+        if subgroup not in subgroups:
+            subgroups[subgroup] = species
+    return list(subgroups.values())
+
+unique_family_species = select_one_per_subgroup(species_list)
+
+if len(unique_family_species) < n:
+    print(f"Error: Not enough subgroups in {species_group} to select {n} species.")
     sys.exit(1)
 
 # Randomly select n species
-final_species = random.sample(species_list, n)
+final_species = random.sample(unique_family_species, n)
 
 # Create a DataFrame
 result_df = pd.DataFrame({species_group.capitalize(): final_species})
