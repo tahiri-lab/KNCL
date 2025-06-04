@@ -2,8 +2,7 @@
 
 """
 Script Name: <overlap_tree_pipeline.py>
-Authors: Aleksandr Koshkarov and Nadia Tahiri
-Last Modified: 2025-03-21
+Last Modified: 2025-04-20
 Description: This Python script automates the process of creating datasets of biologically meaningful partially overlapping phylogenetic trees with branch lengths.
 """
 
@@ -100,7 +99,7 @@ if len(species_list) < n:
     print(f"Error: Not enough species in {species_group} to select {n} species.")
     sys.exit(1)
 
-# Randomly select 'n' species
+# Randomly select n species
 final_species = random.sample(species_list, n)
 
 # Create a DataFrame
@@ -194,7 +193,7 @@ def clean_folder(folder_name):
         shutil.rmtree(folder_name)  # Remove the folder and its contents
         os.makedirs(folder_name)  # Recreate an empty folder
     else:
-        os.makedirs(folder_name)  # Create the folder if it doesn't exist
+        os.makedirs(folder_name)  # Create the folder if it does not exist
 
 def submit_tree_request(driver, species_list, email, group):
     """
