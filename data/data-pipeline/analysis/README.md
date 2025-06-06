@@ -17,13 +17,18 @@ This includes:
   - `supertrees_mrplus.txt` — Majority-Rule
   - `supertrees_scs.txt` — Spectral Clustering
 
+- **`correctness_validation.ipynb`**
+
+This script performs correctness validation for phylogenetic tree datasets generated using the data pipeline.
+
+- **`runtime_evaluation_for_data_pipeline.ipynb`**
+
+This script includes results related to measuring the runtime performance of the dataset assembly pipeline under various configurations (e.g., number of trees, taxon overlap, etc.).
+
 - **`supertree_validation_for_data_pipeline.ipynb`** 
 
   Python script that processes the above supertrees and input sets to calculate:
-  - Success rate of reconstruction
-  - Average number of taxa in the output trees
-  - Average Robinson-Foulds (RF) distance between each supertree and its corresponding input trees
+  - Success rate of reconstruction;
+  - Average number of taxa in the output trees;
+  - Average Robinson-Foulds (RF) distance between each supertree and its corresponding input trees.
 
-- **`runtime_evaluation_for_data_pipeline.ipynb`** (to be added)
-
-This script includes results related to measuring the runtime performance of the dataset assembly pipeline under various configurations (e.g., number of trees, taxon overlap, etc.).
