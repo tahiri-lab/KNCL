@@ -1,6 +1,6 @@
 # Analysis
 
-This folder contains datasets and scripts used for evaluating the performance and functionality of the proposed method for assembling phylogenetic datasets with overlapping taxa, as described in the article "New method for assembling biological datasets of phylogenetic trees with overlapping taxa." The analyses include supertree construction results and runtime evaluations.
+This folder contains datasets and scripts used for evaluating the performance and functionality of the proposed method for assembling phylogenetic datasets with overlapping taxa. The analyses include correctness validation, runtime evaluations, and supertree construction results.
 
 This includes:
 
