@@ -18,7 +18,7 @@
 
 #### Requirements :clipboard:
 - Python 3.x
-- `ete3` Python package
+- `ete3` Python package (with its required dependencies)
 
 #### Installation :wrench:
 Ensure Python 3 and `ete3` are installed. You can install `ete3` via pip if it's not already installed:
