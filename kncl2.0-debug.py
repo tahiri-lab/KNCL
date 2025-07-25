@@ -322,3 +322,12 @@ def run_kNCL_on_newick_strings(newick1, newick2, k):
     print(T1_plus.write(format=1))
     print("\nCompleted Tree 2:")
     print(T2_plus.write(format=1))
+
+# Example
+
+newick_tree1 = "((((Hylobates:4.711,Nomascus:4.711):7.489,Pongo:12.100):5.946,Macaca:18.050):9.590,(Ateles:10.699,Alouatta:10.699):17.037);"
+newick_tree2 = "((((Hylobates:5.420,Nomascus:5.420):6.377,((Pan:4.945,Gorilla:4.945):4.227,Pongo:9.172):2.624):7.520,Macaca:19.317):8.377,Ateles:27.693);"
+
+k = 3
+
+run_kNCL_on_newick_strings(newick_tree1, newick_tree2, k)
