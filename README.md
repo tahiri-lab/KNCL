@@ -1,9 +1,9 @@
 # *k*-NCL
 ***k*-Nearest Common Leaves: overlapping phylogenetic tree completion**
 
-> The results of this work will be submitted.
+> The results of this work are currently in the process of being published.
 >
-> Koshkarov, A. & Tahiri, N. (2025). *k*-Nearest Common Leaves algorithm for phylogenetic tree completion (in progress).
+> Koshkarov, A. & Tahiri, N. (2025). *k*-Nearest Common Leaves algorithm for phylogenetic tree completion and comparison (in progress).
 
 #### Description :bookmark_tabs:
 `kncl.py` is a Python script designed to complete 2 phylogenetic trees defined on different but mutually overlapping sets of taxa on the union of their taxa sets. The script processes trees in Newick format by pairwise comparing them. It outputs the completed versions of these trees.
