@@ -5,3 +5,10 @@ For each of the four groups (Amphibians, Birds, Mammals, and Sharks), we start w
 For every unique tree pair in each cluster dataset, we run two completion strategies: *k*-NCL and RF(+). After completion, we compute RF distances for trees completed with RF(+), and for *k*-NCL–completed trees we compute both RF(*k*-NCL) and BSD(*k*-NCL) distances. We then assemble pairwise distance matrices for all three metrics (RF(+), RF(*k*-NCL), BSD(*k*-NCL)) and visualize them with heatmaps and boxplots to assess how clearly each completion method recovers the intended cluster structure. 
 
 This folder includes tree cluster datasets for four species groups, precomputed distance matrices, and a script that draws the heatmaps and boxplots from those matrices.
+
+### Cluster separation analysis
+
+The script `cluster_analysis.py` computes several cluster-separation metrics for each cluster dataset using the provided pairwise distance matrices. These metrics quantify within-cluster cohesion and between-cluster separation, and include per-dataset scores as well as an aggregated summary across all datasets. It also outputs the following files:
+
+* `cluster_separation_metrics_by_dataset.csv` — metric values reported per dataset.
+* `cluster_separation_overall.csv` — overall summary/aggregation of the same metrics across all datasets.
