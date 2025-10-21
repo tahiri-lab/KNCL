@@ -1,0 +1,4 @@
+﻿Metric,AUROC_P(between>within),Cliffs_delta,Median_ratio_btw_over_within,Mean_silhouette,Dunn_index,Mean_rank_across_metrics
+RF(k‑NCL),1.0,1.0,5.022812,0.7483,1.680833,1.1
+BSD(k‑NCL),0.96968,0.93936,3.809132,0.598502,0.675055,2.2
+RF(+),0.92928,0.85856,2.930686,0.34432,0.59802,2.7
