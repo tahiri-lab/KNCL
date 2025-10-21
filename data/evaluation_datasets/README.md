@@ -2,7 +2,7 @@
 
 In the experimental evaluation of the **k-NCL tree completion algorithm**, two versions of each biological dataset were prepared using the methodology outlined in this repository.
 
-* **Datasets A**: Contain 50 phylogenetic trees per group and are used to evaluate the influence of the parameter `k` in the k-NCL algorithm.
+* **Datasets A**: Contain 100 phylogenetic trees per group and are used to evaluate the influence of the parameter `k` in the k-NCL algorithm.
 * **Datasets B**: Contain a larger number of trees and are used for comparative analysis of distance metrics between completed trees.
 
 The following table summarizes the four biological datasets used:
