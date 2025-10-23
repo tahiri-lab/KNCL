@@ -13,7 +13,7 @@
 >Please note that `kncl.py` is an active work in progress. Development is ongoing to improve its efficiency and extend its functionality to cover a wider range of use cases and tree types (rooted and unrooted).
 
   - Biologically meaningful datasets of partially overlapping phylogenetic trees with branch lengths are available [here](https://github.com/tahiri-lab/KNCL/tree/main/data/).
-  - Biological datasets used in the evaluation part of the *k*-NCL algorithm are located [here](https://github.com/tahiri-lab/KNCL/tree/main/data/evaluation_datasets).
+  - Biological datasets and scripts used in the evaluation part of the *k*-NCL algorithm are located [here](https://github.com/tahiri-lab/KNCL/tree/main/evaluation).
   - The data construction pipeline is available [here](https://github.com/tahiri-lab/KNCL/tree/main/data/data-pipeline).
 
 #### Requirements :clipboard:
