@@ -7,11 +7,11 @@
 
 #### Description :bookmark_tabs:
 `kncl.py` is a Python script designed to complete 2 phylogenetic trees defined on different but mutually overlapping sets of taxa on the union of their taxa sets. The script processes trees in Newick format by pairwise comparing them. It outputs the completed versions of these trees.
-
+<!--
 >:pushpin: **Current Status**
 >
 >Please note that `kncl.py` is an active work in progress. Development is ongoing to improve its efficiency and extend its functionality to cover a wider range of use cases and tree types (rooted and unrooted).
-
+-->
   - Biologically meaningful datasets of partially overlapping phylogenetic trees with branch lengths are available [here](https://github.com/tahiri-lab/KNCL/tree/main/data/).
   - Biological datasets and scripts used in the evaluation part of the *k*-NCL algorithm are located [here](https://github.com/tahiri-lab/KNCL/tree/main/evaluation).
   - The data construction pipeline is available [here](https://github.com/tahiri-lab/KNCL/tree/main/data/data-pipeline).
