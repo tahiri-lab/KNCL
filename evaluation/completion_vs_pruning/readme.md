@@ -9,12 +9,12 @@ Three scenarios are evaluated based on how each distance interprets the similari
   ```math
   \begin{aligned}
   \text{BSD}(k\text{-NCL})(T_1, T^*) &< \text{BSD}(k\text{-NCL})(T_2, T^*) \\
-  \text{BSD}(-)(T_1, T^*) &> \text{BSD}(-)(T_2, T^*)
+  \text{BSD(-)}(T_1, T^*) &> \text{BSD(-)}(T_2, T^*)
   \end{aligned}
   \quad \text{or} \quad
   \begin{aligned}
   \text{BSD}(k\text{-NCL})(T_2, T^*) &< \text{BSD}(k\text{-NCL})(T_1, T^*) \\
-  \text{BSD}(-)(T_2, T^*) &> \text{BSD}(-)(T_1, T^*)
+  \text{BSD(-)}(T_2, T^*) &> \text{BSD(-)}(T_1, T^*)
   \end{aligned}
 
 
@@ -23,7 +23,7 @@ Three scenarios are evaluated based on how each distance interprets the similari
   ```math
   \begin{aligned}
   \text{BSD}(k\text{-NCL})(T_1, T^*) &\neq \text{BSD}(k\text{-NCL})(T_2, T^*) \\
-  \text{BSD}(-)(T_1, T^*) &= \text{BSD}(-)(T_2, T^*)
+  \text{BSD(-)}(T_1, T^*) &= \text{BSD(-)}(T_2, T^*)
   \end{aligned}
 
 * **Scenario 3 (same *k*-NCL distance, different BSD(-)):**
@@ -31,7 +31,7 @@ Three scenarios are evaluated based on how each distance interprets the similari
   ```math
   \begin{aligned}
   \text{BSD}(k\text{-NCL})(T_1, T^*) &= \text{BSD}(k\text{-NCL})(T_2, T^*) \\
-  \text{BSD}(-)(T_1, T^*) &\neq \text{BSD}(-)(T_2, T^*)
+  \text{BSD(-)}(T_1, T^*) &\neq \text{BSD(-)}(T_2, T^*)
   \end{aligned}
 
 The results include a table, line graphs, and violin charts showing the proportion of conflicts for each overlap level.
