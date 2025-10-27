@@ -323,17 +323,82 @@ def compute_and_save_distances(dataset, dataset_name, save_file, n_jobs=None):
 
     return bsd_results, optimal_k_data_bsd
 
-
 # Plotting (BSD(k–NCL))
 
-def plot_bsd_vs_k_per_dataset(all_bsd_results, dataset_names):
+def plot_bsd_vs_k_per_dataset(all_bsd_results, dataset_names, *,
+                              palette='tab20',
+                              sat_start_frac=0.25,  # start at ~25% of end saturation
+                              sat_end_min=0.88,     # ensure high saturation at the end
+                              light_start_boost=0.12,  # +lightness at start (brighter)
+                              light_end_drop=0.06,     # -lightness at end (darker)
+                              line_width=2.2,
+                              marker_size=5.0):
+    """
+    Lines are rendered with a saturation gradient (light -> dark) plus a small lightness shift.
+    Start is visibly lighter/desaturated; end is saturated and slightly darker.
+    """
     plt = _setup_matplotlib()
-    # Use the exact same keys as the compute step
+    import matplotlib as mpl
+    import numpy as np
+    import colorsys
+    from matplotlib.collections import LineCollection
+
+    def _distinct_colors(n, base_palette='tab20'):
+        if base_palette in ('tab10', 'tab20'):
+            cmap = mpl.cm.get_cmap(base_palette)
+            m = cmap.N
+            if n <= m:
+                return [cmap(i) for i in range(n)]
+            colors = [cmap(i) for i in range(m)]
+            colors += [mpl.colors.hsv_to_rgb((i / (n - m), 0.65, 0.92)).tolist() + [1.0]
+                       for i in range(n - m)]
+            return colors
+        else:
+            cmap = mpl.cm.get_cmap(base_palette, n)
+            return [cmap(i) for i in range(cmap.N)]
+
+    def _clamp(x, lo, hi): return max(lo, min(hi, x))
+
+    def _gradient_colors_hls(base_rgba, n_segments):
+        r, g, b, a = base_rgba
+        h, l, s = colorsys.rgb_to_hls(r, g, b)
+
+        # Build saturation ramp: low -> high
+        s_end = _clamp(max(s, sat_end_min), 0.0, 1.0)
+        s_start = _clamp(s_end * sat_start_frac, 0.18, 0.95)
+
+        # Lightness: start a bit brighter, end a bit darker
+        l_start = _clamp(l + light_start_boost, 0.28, 0.85)
+        l_end   = _clamp(l - light_end_drop,  0.28, 0.80)
+
+        ts = np.linspace(0, 1, n_segments)
+        out = []
+        for t in ts:
+            s_t = (1 - t) * s_start + t * s_end
+            l_t = (1 - t) * l_start + t * l_end
+            rr, gg, bb = colorsys.hls_to_rgb(h, l_t, s_t)
+            out.append((rr, gg, bb, a))
+        return out
+
+    def _plot_gradient_line(ax, xs, ys, base_rgba):
+        pts = np.column_stack([xs, ys])
+        mask = ~np.isnan(pts).any(axis=1)
+        pts = pts[mask]
+        if len(pts) < 2:
+            return None, None
+        segs = np.concatenate([pts[:-1, None, :], pts[1:, None, :]], axis=1)
+        colors = _gradient_colors_hls(base_rgba, len(segs))
+        lc = LineCollection(segs, colors=colors, linewidths=line_width,
+                            capstyle='round', joinstyle='round', zorder=2)
+        ax.add_collection(lc)
+        end_color = colors[-1]
+        ax.scatter(pts[:,0], pts[:,1], s=marker_size**2, color=end_color, zorder=3)
+        return lc, end_color
+
     k_labels_order = [
         '$k=2$', '$k=3$', '$k=\\lfloor\\sqrt{N_{cl}}\\rfloor$',
         '$k=\\lfloor\\frac{N_{cl} + 2}{2}\\rfloor$', '$k=N_{cl}-1$', '$k=N_{cl}$'
     ]
-    # Display labels
     label_map = {
         '$k=2$': r'$2$',
         '$k=3$': r'$3$',
@@ -343,42 +408,64 @@ def plot_bsd_vs_k_per_dataset(all_bsd_results, dataset_names):
         '$k=N_{cl}$': r'$N_{cl}$'
     }
 
+    uniq_bins = sorted({float(p) for res in all_bsd_results for p in res.keys()})
+    if not uniq_bins:
+        print("Nothing to plot.")
+        return
+
+    base_colors = _distinct_colors(len(uniq_bins), base_palette=palette)
+    base_for_bin = {p: base_colors[i] for i, p in enumerate(uniq_bins)}
+
     fig, axs = plt.subplots(2, 2, figsize=(15, 15))
     axs = axs.flatten()
+    x_numeric = list(range(len(k_labels_order)))
+
+    legend_handles, legend_labels = [], []
+
     for idx, results in enumerate(all_bsd_results):
         ax = axs[idx]
-        for overlap_bin in sorted(results.keys()):
-            bsd_means = []
-            label_used = False
+        for p in uniq_bins:
+            if p not in results:
+                continue
+            ys = []
             for k_label in k_labels_order:
-                bsd_values = results.get(overlap_bin, {}).get(k_label, [])
-                if bsd_values:
-                    label_used = True
-                bsd_mean = np.mean(bsd_values) if bsd_values else np.nan
-                bsd_means.append(bsd_mean)
+                vals = results.get(p, {}).get(k_label, [])
+                ys.append(np.mean(vals) if vals else np.nan)
+            if np.all(np.isnan(ys)):
+                continue
 
-            if label_used:
-                ax.plot(k_labels_order, bsd_means, marker='o', label=f'{overlap_bin}')
+            base = base_for_bin[p]
+            _, end_color = _plot_gradient_line(ax, x_numeric, ys, base)
+
+            if idx == 0:
+                h = mpl.lines.Line2D([0], [0], color=end_color, linewidth=line_width+0.6)
+                legend_handles.append(h)
+                legend_labels.append(f'{p:.1f}')
 
         ax.set_xlabel(r'$k$', fontsize=14)
-        ax.set_ylabel('Average BSD($k$–NCL)', fontsize=14)
+        ax.set_ylabel(r'Average BSD($k$–NCL)', fontsize=14)
         ax.set_title(dataset_names[idx], loc='left', fontsize=16)
         ax.tick_params(axis='both', labelsize=14)
-        ax.set_xticks(range(len(k_labels_order)))
+        ax.set_xticks(x_numeric)
         ax.set_xticklabels([label_map[k] for k in k_labels_order], fontsize=14)
-        ax.grid(True)
+        ax.grid(True, alpha=0.3)
+        ax.autoscale()
 
-    # Shared legend
-    handles, labels = axs[0].get_legend_handles_labels()
-    if handles:
-        fig.legend(handles, labels, title=r'Overlap level $p$',
-                   loc='lower center', bbox_to_anchor=(0.5, -0.035),
-                   ncol=len(labels), fontsize=12, title_fontsize=14)
+    # Legend under the plots
+    if legend_handles:
+        fig.legend(
+            legend_handles, legend_labels, title=r'Overlap level $p$',
+            loc='lower center', bbox_to_anchor=(0.5, -0.004),
+            ncol=min(len(legend_labels), 10),
+            fontsize=12, title_fontsize=14,
+            frameon=False, handlelength=2.8, columnspacing=1.2, labelspacing=0.3
+        )
 
-    plt.tight_layout(rect=[0, 0, 1, 0.95])
+    # Keep a thin margin for the legend area
+    plt.tight_layout(rect=[0, 0.02, 1, 0.95])
     plt.savefig('bsd_vs_k_per_dataset.pdf', format='pdf', bbox_inches='tight')
     plt.savefig('bsd_vs_k_per_dataset.svg', format='svg', bbox_inches='tight')
-    #plt.show()
+    # plt.show()
 
 # Optional
 def plot_optimal_k_vs_overlap_per_dataset(all_optimal_k_results, dataset_names):
@@ -400,8 +487,7 @@ def plot_optimal_k_vs_overlap_per_dataset(all_optimal_k_results, dataset_names):
     plt.savefig('optimal_k_vs_overlap_per_dataset_bsd.pdf', format='pdf')
     plt.savefig('optimal_k_vs_overlap_per_dataset_bsd.svg', format='svg')
     plt.show()
-
-
+    
 # Main
 
 if __name__ == "__main__":
