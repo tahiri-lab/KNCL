@@ -43,7 +43,7 @@ Given an input file `example.newick` with the following content:
 ```
 Run the script as:
 ```bash
-python kncl.py -i example.newick 2 -o output.txt
+python kncl.py -i example.newick 3 -o output.txt
 ```
 
 #### Output :book:
