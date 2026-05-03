@@ -1,6 +1,6 @@
 # Binarize Newick Trees
 
-This script reads one or more Newick phylogenetic trees, resolves multifurcations, and writes binary trees.
+This script reads one or more Newick phylogenetic trees, resolves multifurcations, and writes binary trees. This script is useful as a post-processing step when tree completion may introduce multifurcations. It resolves any internal node with more than two children and returns binary-refined Newick trees. Used for the evaluation purposes.
 
 ## Usage
 
