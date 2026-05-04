@@ -243,3 +243,107 @@ The output file will contain the completed trees returned to their original resp
 * If a tree has a zero median pairwise distance, `median-all-pairwise` cannot be used for that tree. In that case, try `mean-all-pairwise` or `total-tree-length` if biologically appropriate.
 
 * The added or completed branch lengths after *k*-NCL should be interpreted with care. Scaling makes branch-length magnitudes more comparable numerically, but it does not guarantee that branch lengths from different biological sources have the same meaning.
+
+# Empirical recommendations on branch length scaling
+
+## When is extra scaling needed before *k*-NCL?
+
+*k*-NCL already includes internal branch-length adjustment. In particular, it estimates scale relationships from distances among common leaves and uses those rates during subtree insertion. Therefore, external preprocessing is not always necessary.
+
+External scaling is most useful when the input trees have large global branch-length differences or when the overlap between a pair of trees is small or potentially unrepresentative.
+
+### Cases where internal *k*-NCL scaling may be enough
+
+Extra scaling is usually optional when two trees have:
+
+* the same branch-length meaning
+* enough common taxa (see details below)
+* similar relative distance structure among common taxa
+* a mostly multiplicative scale difference
+
+For example, if most common-leaf distances satisfy approximately:
+
+```text
+distance_tree_A(i,j) ≈ c * distance_tree_B(i,j)
+```
+
+for a relatively stable constant `c`, then *k*-NCL's internal adjustment may already handle the scale difference reasonably well.
+
+#### What counts as enough common taxa?
+
+As a rough guideline:
+
+- 2 common taxa gives only 1 pairwise distance and is not enough for reliable scale estimation.
+- 3-5 common taxa is very weak and can be strongly affected by one unusual branch.
+- 6-10 common taxa may be usable if the taxa are spread across the tree.
+- 10-20 common taxa is usually more reliable.
+- More than 20 common taxa is generally good, provided the shared taxa are not all concentrated in one small clade.
+
+The shared taxa should ideally be distributed across the tree. A small number of well-distributed common taxa can be more useful than many common taxa restricted to one shallow clade.
+
+
+### Cases where external scaling is recommended
+
+External scaling is recommended when:
+
+* tree branch lengths differ by more than about 10x
+* the two trees share only a small number of leaves
+* the common leaves are concentrated in one clade and may not represent the full tree
+* branch lengths have very different numerical magnitudes, such as 0.0001 in one tree and 100 in another
+
+### Practical diagnostic before scaling
+
+Before deciding whether scaling is needed, compare simple branch-length summaries across trees:
+
+* median all-leaf pairwise distance
+* mean all-leaf pairwise distance
+* total tree length
+
+For two trees, compute ratios such as:
+
+* median_distance_tree_A / median_distance_tree_B
+* mean_distance_tree_A / mean_distance_tree_B
+* total_length_tree_A / total_length_tree_B
+
+As a practical rule of thumb (empirical):
+
+```text
+scale ratio < 2-5x:
+    external scaling is usually optional
+
+scale ratio around 5-10x:
+    external scaling is reasonable, especially in batch tree processing
+
+scale ratio > 10x:
+    external scaling is recommended
+
+scale ratio varies strongly depending on which summary is used:
+    scaling may still help numerically, but completed branch lengths should be interpreted cautiously
+```
+
+These thresholds are practical guidelines, not strict mathematical rules.
+
+### Check common-leaf distance compatibility
+
+For a specific pair of trees, it can also be useful to compare distances among shared leaves.
+
+For each pair of common leaves `(i,j)`, compute:
+
+* distance_tree_A(i,j)
+* distance_tree_B(i,j)
+* ratio_ij = distance_tree_A(i,j) / distance_tree_B(i,j)
+
+If the ratios `ratio_ij` are fairly consistent, then the scale mismatch is mostly global and scaling is meaningful.
+
+If the ratios vary strongly, then the difference between the trees is not only a global scale issue. External scaling may still improve numerical comparability, but it cannot fully correct local rate heterogeneity, different branch-length estimation behavior, or conflicting biological signals.
+
+### Important note
+
+External scaling should not be used to force together branch lengths with incompatible meanings. For example:
+
+* Tree 1 branch lengths = substitutions/site
+* Tree 2 branch lengths = absolute time
+
+A single multiplicative scale factor may not make such trees biologically comparable.
+
+In such cases, the completed topology may still be useful, but completed branch lengths should be interpreted with care.
